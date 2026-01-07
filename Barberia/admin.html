@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barbería Elite - Panel de Administración</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Menú móvil -->
+    <div class="menu-mobile-toggle">
+        <i class="fas fa-bars"></i>
+    </div>
+
+    <header>
+        <div class="container">
+            <div class="logo">
+                <i class="fas fa-cut"></i>
+                <h1>Barbería Elite - Admin</h1>
+            </div>
+            <nav class="nav-desktop">
+                <ul>
+                    <li><a href="index.html">Página Principal</a></li>
+                    <li><a href="admin.html" class="active">Panel Admin</a></li>
+                </ul>
+            </nav>
+            <nav class="nav-mobile">
+                <ul>
+                    <li><a href="index.html">Página Principal</a></li>
+                    <li><a href="admin.html" class="active">Panel Admin</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="hero">
+            <h2>Panel de Administración</h2>
+            <p>Gestiona la disponibilidad de barberos y los turnos reservados</p>
+        </section>
+
+        <!-- Gestión de barberos -->
+        <section class="barberos-admin-section">
+            <h2>Gestión de Barberos</h2>
+            <div class="barberos-admin-container" id="barberos-admin-container">
+                <!-- Barberos cargados dinámicamente -->
+            </div>
+        </section>
+
+        <!-- Filtros para turnos -->
+        <section class="filtros-section">
+            <h2>Filtrar Turnos</h2>
+            <div class="filtros">
+                <div class="form-group">
+                    <label for="filtro-fecha">Fecha:</label>
+                    <input type="date" id="filtro-fecha">
+                </div>
+                <div class="form-group">
+                    <label for="filtro-barbero">Barbero:</label>
+                    <select id="filtro-barbero">
+                        <option value="">Todos</option>
+                        <option value="1">Carlos Martínez</option>
+                        <option value="2">Jorge Rodríguez</option>
+                        <option value="3">Luis González</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="filtro-estado">Estado:</label>
+                    <select id="filtro-estado">
+                        <option value="">Todos</option>
+                        <option value="pendiente">Pendientes</option>
+                        <option value="completado">Completados</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>&nbsp;</label>
+                    <button id="limpiar-filtros" class="btn-secundario">
+                        <i class="fas fa-filter"></i> Limpiar Filtros
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Turnos reservados -->
+        <section class="turnos-admin-section">
+            <h2>Turnos Reservados</h2>
+            <div class="turnos-admin-container" id="turnos-admin-container">
+                <!-- Turnos cargados dinámicamente -->
+            </div>
+        </section>
+
+        <!-- Estadísticas -->
+        <section class="estadisticas-section">
+            <h2>Estadísticas</h2>
+            <div class="estadisticas-grid">
+                <div class="estadistica-card">
+                    <h3>Turnos Hoy</h3>
+                    <p id="turnos-hoy">0</p>
+                </div>
+                <div class="estadistica-card">
+                    <h3>Turnos Pendientes</h3>
+                    <p id="turnos-pendientes">0</p>
+                </div>
+                <div class="estadistica-card">
+                    <h3>Turnos Completados</h3>
+                    <p id="turnos-completados">0</p>
+                </div>
+                <div class="estadistica-card">
+                    <h3>Total Turnos</h3>
+                    <p id="total-turnos">0</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p><i class="fas fa-user-shield"></i> Panel de administración - Acceso restringido</p>
+            <p>&copy; 2023 Barbería Elite. Uso exclusivo del personal autorizado.</p>
+        </div>
+    </footer>
+
+    <script src="admin.js"></script>
+</body>
+</html>
