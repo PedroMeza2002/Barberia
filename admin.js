@@ -1,513 +1,757 @@
-// Datos iniciales
-let barberos = JSON.parse(localStorage.getItem('barberos')) || [
-    { id: 1, nombre: "Carlos Martínez", especialidad: "Cortes modernos", disponible: true },
-    { id: 2, nombre: "Jorge Rodríguez", especialidad: "Barbas y bigotes", disponible: true },
-    { id: 3, nombre: "Luis González", especialidad: "Cortes clásicos", disponible: true }
-];
+// ============================================
+// ADMIN.JS - Sistema de Gestión de Barbería
+// ============================================
 
-// Turnos reservados
-let turnosReservados = JSON.parse(localStorage.getItem('turnosReservados')) || [];
+// 1. CONFIGURACIÓN SUPABASE
+const SUPABASE_URL = 'https://hcueuizcuiwscxqcmabn.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_4nmQhV4bchtTGumi5J2qSA_7Rli-O1m';
 
-// Inicializar panel de administración
-document.addEventListener('DOMContentLoaded', function() {
-    // Verificar acceso
-    verificarAcceso();
-    
-    // Cargar datos
-    cargarBarberosAdmin();
-    cargarTurnosAdmin();
-    actualizarEstadisticas();
-    
-    // Configurar eventos de filtros
-    document.getElementById('filtro-fecha').addEventListener('change', function() {
-        cargarTurnosAdmin();
-        actualizarEstadisticas();
+// Verificar si Supabase está disponible
+if (typeof supabase === 'undefined') {
+    console.error("Supabase no está cargado");
+    document.addEventListener('DOMContentLoaded', function() {
+        alert("Error: Supabase no está disponible. Recarga la página.");
     });
+} else {
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     
-    document.getElementById('filtro-barbero').addEventListener('change', function() {
-        cargarTurnosAdmin();
-        actualizarEstadisticas();
-    });
+    // Variables de estado global
+    let turnosReservados = [];
+    let barberos = [];
     
-    document.getElementById('filtro-estado').addEventListener('change', function() {
-        cargarTurnosAdmin();
-        actualizarEstadisticas();
-    });
-    
-    // Configurar botón de limpiar filtros
-    const limpiarFiltrosBtn = document.getElementById('limpiar-filtros');
-    if (limpiarFiltrosBtn) {
-        limpiarFiltrosBtn.addEventListener('click', function() {
-            document.getElementById('filtro-fecha').value = '';
-            document.getElementById('filtro-barbero').value = '';
-            document.getElementById('filtro-estado').value = '';
-            cargarTurnosAdmin();
-            actualizarEstadisticas();
-        });
-    }
-});
-
-// Verificar acceso con contraseña
-function verificarAcceso() {
-    const password = sessionStorage.getItem('admin-authenticated');
-    
-    if (!password || password !== 'admin123') {
-        const entrada = prompt("Ingresa la contraseña de administrador:");
+    // 2. INICIALIZACIÓN
+    document.addEventListener('DOMContentLoaded', async function() {
+        console.log("Inicializando sistema administrativo...");
         
-        if (entrada !== 'admin123') {
-            alert("Acceso denegado. Redirigiendo a la página principal.");
-            window.location.href = 'index.html';
-        } else {
-            sessionStorage.setItem('admin-authenticated', 'admin123');
+        // Verificar acceso de administrador
+        verificarAcceso();
+        
+        // Cargar datos iniciales
+        await cargarDatosIniciales();
+        
+        // Configurar eventos
+        configurarEventos();
+        
+        // Suscripción realtime para actualizaciones automáticas
+        configurarSuscripcionesRealtime();
+    });
+    
+    // 3. FUNCIONES DE CARGA DE DATOS
+    async function cargarDatosIniciales() {
+        try {
+            console.log("Cargando datos iniciales...");
+            
+            // Cargar barberos primero
+            await cargarBarberosDesdeSupabase();
+            
+            // Cargar turnos después
+            await cargarTurnosAdmin();
+            
+            console.log("Datos cargados exitosamente");
+        } catch (error) {
+            console.error("Error al cargar datos iniciales:", error);
+            mostrarNotificacion("Error al cargar datos", "error");
         }
     }
-}
-
-// Cargar barberos en el panel de admin con controles de disponibilidad
-function cargarBarberosAdmin() {
-    const container = document.getElementById('barberos-admin-container');
-    if (!container) return;
     
-    barberos = JSON.parse(localStorage.getItem('barberos')) || [];
-    
-    container.innerHTML = '';
-    
-    barberos.forEach(barbero => {
-        const barberoCard = document.createElement('div');
-        barberoCard.className = 'barbero-card-admin';
+    // 4. CARGA DE BARBEROS DESDE SUPABASE
+    async function cargarBarberosDesdeSupabase() {
+        console.log("Cargando barberos desde Supabase...");
         
-        barberoCard.innerHTML = `
-            <div class="barbero-header">
-                <div class="barbero-nombre">${barbero.nombre}</div>
-                <div class="estado ${barbero.disponible ? 'estado-disponible' : 'estado-no-disponible'}">
-                    ${barbero.disponible ? 'Disponible' : 'No disponible'}
+        const { data: barberosDB, error } = await _supabase
+            .from('barberos')
+            .select('*')
+            .order('id', { ascending: true });
+        
+        if (error) {
+            console.error("Error al cargar barberos:", error);
+            
+            // Usar datos locales temporalmente
+            barberos = [
+                { 
+                    id: 1, 
+                    nombre: "Denis", 
+                    especialidad: "Corte y barba", 
+                    activo: true,
+                    telefono: "",
+                    email: "",
+                    horario: "Lunes a Viernes: 9:00-18:00"
+                },
+                { 
+                    id: 2, 
+                    nombre: "Leo", 
+                    especialidad: "Corte y barba", 
+                    activo: true,
+                    telefono: "",
+                    email: "",
+                    horario: "Martes a Sábado: 10:00-19:00"
+                },
+                { 
+                    id: 3, 
+                    nombre: "Silva", 
+                    especialidad: "Corte y barba", 
+                    activo: true,
+                    telefono: "",
+                    email: "",
+                    horario: "Lunes a Sábado: 8:00-17:00"
+                }
+            ];
+            
+            mostrarNotificacion("Usando barberos predeterminados. Verifica tu conexión.", "advertencia");
+        } else {
+            // Procesar barberos para asegurar que todos los campos existan
+            barberos = barberosDB.map(barbero => ({
+                id: barbero.id,
+                nombre: barbero.nombre || "Sin nombre",
+                especialidad: barbero.especialidad || "Sin especialidad",
+                activo: barbero.activo !== false, // Default true
+                telefono: barbero.telefono || "",
+                email: barbero.email || "",
+                horario: barbero.horario || "Horario no definido",
+                created_at: barbero.created_at || new Date().toISOString()
+            }));
+        }
+        
+        console.log(`Barberos cargados: ${barberos.length}`);
+        
+        // Renderizar barberos y actualizar select de filtros
+        renderizarBarberosAdmin();
+        actualizarSelectBarberos();
+    }
+    
+    // 5. RENDERIZADO DE BARBEROS EN LA INTERFAZ
+    function renderizarBarberosAdmin() {
+        const container = document.getElementById('barberos-admin-container');
+        if (!container) {
+            console.log("Contenedor de barberos no encontrado.");
+            return;
+        }
+        
+        if (barberos.length === 0) {
+            container.innerHTML = `
+                <div class="sin-turnos">
+                    <i class="fas fa-user-slash"></i>
+                    <p>No hay barberos registrados</p>
+                    <button class="btn-primary" onclick="mostrarModalNuevoBarbero()">
+                        <i class="fas fa-plus"></i> Agregar Primer Barbero
+                    </button>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '';
+        
+        barberos.forEach(barbero => {
+            html += `
+                <div class="barbero-card-admin ${!barbero.activo ? 'completado' : ''}">
+                    <div class="barbero-header">
+                        <div class="barbero-nombre">${barbero.nombre}</div>
+                        <div class="estado ${barbero.activo ? 'estado-disponible' : 'estado-no-disponible'}">
+                            ${barbero.activo ? 'Activo' : 'Inactivo'}
+                        </div>
+                    </div>
+                    
+                    <div class="barbero-info">
+                        <p class="barbero-especialidad">${barbero.especialidad}</p>
+                        
+                        <div class="turno-detalle">
+                            <i class="fas fa-phone"></i>
+                            <span>${barbero.telefono || 'No registrado'}</span>
+                        </div>
+                        
+                        <div class="turno-detalle">
+                            <i class="fas fa-envelope"></i>
+                            <span>${barbero.email || 'No registrado'}</span>
+                        </div>
+                        
+                        <div class="turno-detalle">
+                            <i class="fas fa-clock"></i>
+                            <span>${barbero.horario}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="barbero-acciones" style="padding: 15px; border-top: 1px solid #eee;">
+                        <button class="btn-secundario btn-sm" onclick="toggleActivoBarbero(${barbero.id}, ${!barbero.activo})" style="margin-right: 10px;">
+                            <i class="fas fa-power-off"></i> ${barbero.activo ? 'Desactivar' : 'Activar'}
+                        </button>
+                        <button class="btn-editar" onclick="editarBarbero(${barbero.id})" style="margin-right: 10px;">
+                            <i class="fas fa-edit"></i> Editar
+                        </button>
+                        <button class="btn-danger" onclick="eliminarBarbero(${barbero.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        // Añadir botón para nuevo barbero
+        html += `
+            <div class="barbero-card-admin" style="text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 2px dashed #d4af37;">
+                <i class="fas fa-user-plus" style="font-size: 2.5rem; color: #d4af37; margin-bottom: 15px;"></i>
+                <p style="margin-bottom: 20px; color: #666;">Agregar nuevo barbero</p>
+                <button class="btn-primary" onclick="mostrarModalNuevoBarbero()" style="max-width: 200px;">
+                    <i class="fas fa-plus"></i> Nuevo Barbero
+                </button>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+    }
+    
+    function actualizarSelectBarberos() {
+        const select = document.getElementById('filtro-barbero');
+        if (!select) return;
+        
+        // Guardar el valor seleccionado actual
+        const valorActual = select.value;
+        
+        // Limpiar opciones excepto la primera
+        while (select.options.length > 1) {
+            select.remove(1);
+        }
+        
+        // Añadir barberos
+        barberos.forEach(barbero => {
+            if (barbero.activo) {
+                const option = document.createElement('option');
+                option.value = barbero.id;
+                option.textContent = barbero.nombre;
+                select.appendChild(option);
+            }
+        });
+        
+        // Restaurar el valor seleccionado si existe
+        if (valorActual && [...select.options].some(opt => opt.value === valorActual)) {
+            select.value = valorActual;
+        }
+    }
+    
+    // 6. FUNCIONES CRUD PARA BARBEROS
+    window.toggleActivoBarbero = async function(id, nuevoEstado) {
+        const { error } = await _supabase
+            .from('barberos')
+            .update({ activo: nuevoEstado })
+            .eq('id', id);
+        
+        if (error) {
+            console.error("Error al actualizar barbero:", error);
+            mostrarNotificacion('Error al actualizar estado', 'error');
+            return;
+        }
+        
+        // Actualizar localmente
+        const index = barberos.findIndex(b => b.id === id);
+        if (index !== -1) {
+            barberos[index].activo = nuevoEstado;
+        }
+        
+        // Recargar la interfaz
+        renderizarBarberosAdmin();
+        actualizarSelectBarberos();
+        mostrarNotificacion(
+            `Barbero ${nuevoEstado ? 'activado' : 'desactivado'} exitosamente`,
+            'exito'
+        );
+    };
+    
+    window.editarBarbero = async function(id) {
+        const barbero = barberos.find(b => b.id === id);
+        if (!barbero) {
+            mostrarNotificacion('Barbero no encontrado', 'error');
+            return;
+        }
+        
+        mostrarModalBarbero(barbero);
+    };
+    
+    window.eliminarBarbero = async function(id) {
+        // Verificar si tiene turnos asociados
+        const { data: turnosAsociados } = await _supabase
+            .from('turnos')
+            .select('id, cliente, fecha')
+            .eq('barbero_id', id)
+            .eq('completado', false);
+        
+        let mensajeConfirmacion = '¿Eliminar este barbero permanentemente?';
+        
+        if (turnosAsociados && turnosAsociados.length > 0) {
+            mensajeConfirmacion = `Este barbero tiene ${turnosAsociados.length} turno(s) pendiente(s). ¿Seguro que quieres eliminarlo?`;
+        }
+        
+        if (!confirm(mensajeConfirmacion)) {
+            return;
+        }
+        
+        const { error } = await _supabase
+            .from('barberos')
+            .delete()
+            .eq('id', id);
+        
+        if (error) {
+            console.error("Error al eliminar barbero:", error);
+            mostrarNotificacion('Error al eliminar barbero', 'error');
+            return;
+        }
+        
+        // Actualizar localmente
+        barberos = barberos.filter(b => b.id !== id);
+        
+        // Recargar interfaz
+        renderizarBarberosAdmin();
+        actualizarSelectBarberos();
+        mostrarNotificacion('Barbero eliminado exitosamente', 'exito');
+    };
+    
+    // 7. MODAL PARA NUEVO/EDITAR BARBERO
+    window.mostrarModalNuevoBarbero = function() {
+        mostrarModalBarbero();
+    };
+    
+    function mostrarModalBarbero(barberoExistente = null) {
+        const esNuevo = !barberoExistente;
+        
+        const modalHTML = `
+            <div class="modal-overlay" id="modal-barbero" style="
+                position: fixed;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.7);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 10000;
+                padding: 20px;
+            ">
+                <div class="modal-content" style="
+                    background: white;
+                    border-radius: 10px;
+                    max-width: 500px;
+                    width: 100%;
+                    max-height: 90vh;
+                    overflow-y: auto;
+                ">
+                    <div class="modal-header" style="
+                        padding: 20px;
+                        border-bottom: 1px solid #eee;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                    ">
+                        <h3 style="margin: 0; color: #1a1a1a;">${esNuevo ? 'Nuevo Barbero' : 'Editar Barbero'}</h3>
+                        <button onclick="cerrarModalBarbero()" style="
+                            background: none;
+                            border: none;
+                            font-size: 1.5rem;
+                            color: #666;
+                            cursor: pointer;
+                            padding: 5px;
+                        ">&times;</button>
+                    </div>
+                    
+                    <div class="modal-body" style="padding: 20px;">
+                        <form id="form-barbero" onsubmit="event.preventDefault(); guardarBarbero();">
+                            <input type="hidden" id="barbero-id" value="${barberoExistente?.id || ''}">
+                            
+                            <div class="form-group">
+                                <label for="barbero-nombre">Nombre *</label>
+                                <input type="text" id="barbero-nombre" class="form-control" 
+                                       value="${barberoExistente?.nombre || ''}" 
+                                       placeholder="Ej: Juan Pérez" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="barbero-especialidad">Especialidad *</label>
+                                <input type="text" id="barbero-especialidad" class="form-control"
+                                       value="${barberoExistente?.especialidad || ''}"
+                                       placeholder="Ej: Cortes modernos, Barbas, etc." required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="barbero-telefono">Teléfono</label>
+                                <input type="tel" id="barbero-telefono" class="form-control"
+                                       value="${barberoExistente?.telefono || ''}"
+                                       placeholder="Ej: 0981 123456">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="barbero-email">Email</label>
+                                <input type="email" id="barbero-email" class="form-control"
+                                       value="${barberoExistente?.email || ''}"
+                                       placeholder="Ej: barbero@ejemplo.com">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="barbero-horario">Horario de trabajo</label>
+                                <input type="text" id="barbero-horario" class="form-control"
+                                       value="${barberoExistente?.horario || ''}"
+                                       placeholder="Ej: Lunes a Viernes 9:00-18:00">
+                            </div>
+                            
+                            ${!esNuevo ? `
+                            <div class="form-group">
+                                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                                    <input type="checkbox" id="barbero-activo" ${barberoExistente?.activo ? 'checked' : ''}>
+                                    <span>Barbero activo (aparece disponible para turnos)</span>
+                                </label>
+                            </div>
+                            ` : ''}
+                        </form>
+                    </div>
+                    
+                    <div class="modal-footer" style="
+                        padding: 20px;
+                        border-top: 1px solid #eee;
+                        display: flex;
+                        justify-content: flex-end;
+                        gap: 10px;
+                    ">
+                        <button class="btn-secundario" onclick="cerrarModalBarbero()">Cancelar</button>
+                        <button class="btn-primary" onclick="guardarBarbero()">
+                            ${esNuevo ? 'Crear Barbero' : 'Guardar Cambios'}
+                        </button>
+                    </div>
                 </div>
             </div>
-            <div class="barbero-info">
-                <p class="barbero-especialidad">${barbero.especialidad}</p>
-                <button class="btn-secundario toggle-disponibilidad-admin" data-id="${barbero.id}">
-                    <i class="fas ${barbero.disponible ? 'fa-toggle-on' : 'fa-toggle-off'}"></i>
-                    ${barbero.disponible ? 'Desactivar' : 'Activar'}
-                </button>
-            </div>
         `;
         
-        container.appendChild(barberoCard);
-    });
+        // Remover modal existente si hay
+        const modalExistente = document.getElementById('modal-barbero');
+        if (modalExistente) modalExistente.remove();
+        
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+    }
     
-    // Configurar eventos para cambiar disponibilidad
-    document.querySelectorAll('.toggle-disponibilidad-admin').forEach(button => {
-        button.addEventListener('click', function() {
-            const id = parseInt(this.getAttribute('data-id'));
-            cambiarDisponibilidadAdmin(id);
+    window.cerrarModalBarbero = function() {
+        const modal = document.getElementById('modal-barbero');
+        if (modal) modal.remove();
+    };
+    
+    window.guardarBarbero = async function() {
+        // Obtener datos del formulario
+        const barberoData = {
+            nombre: document.getElementById('barbero-nombre').value.trim(),
+            especialidad: document.getElementById('barbero-especialidad').value.trim(),
+            telefono: document.getElementById('barbero-telefono').value.trim(),
+            email: document.getElementById('barbero-email').value.trim(),
+            horario: document.getElementById('barbero-horario').value.trim()
+        };
+        
+        const id = document.getElementById('barbero-id').value;
+        const esNuevo = !id;
+        
+        // Validación
+        if (!barberoData.nombre || !barberoData.especialidad) {
+            mostrarNotificacion('Nombre y especialidad son requeridos', 'error');
+            return;
+        }
+        
+        // Si es edición, incluir el campo activo
+        if (!esNuevo) {
+            barberoData.activo = document.getElementById('barbero-activo').checked;
+        } else {
+            // Para nuevos barberos, activo por defecto
+            barberoData.activo = true;
+        }
+        
+        let result;
+        if (esNuevo) {
+            result = await _supabase
+                .from('barberos')
+                .insert([barberoData])
+                .select();
+        } else {
+            result = await _supabase
+                .from('barberos')
+                .update(barberoData)
+                .eq('id', id);
+        }
+        
+        const { data, error } = result;
+        
+        if (error) {
+            console.error("Error al guardar barbero:", error);
+            mostrarNotificacion('Error al guardar barbero: ' + error.message, 'error');
+            return;
+        }
+        
+        // Si es nuevo, obtener el ID generado
+        if (esNuevo && data && data[0]) {
+            barberoData.id = data[0].id;
+            barberoData.created_at = data[0].created_at;
+            barberos.push(barberoData);
+        } else {
+            // Actualizar localmente
+            const index = barberos.findIndex(b => b.id == id);
+            if (index !== -1) {
+                barberos[index] = { ...barberos[index], ...barberoData };
+            }
+        }
+        
+        // Cerrar modal y actualizar interfaz
+        cerrarModalBarbero();
+        renderizarBarberosAdmin();
+        actualizarSelectBarberos();
+        mostrarNotificacion(
+            `Barbero ${esNuevo ? 'creado' : 'actualizado'} exitosamente`,
+            'exito'
+        );
+    };
+    
+    // 8. FUNCIONES EXISTENTES DE TURNOS
+    async function cargarTurnosAdmin() {
+        const { data, error } = await _supabase
+            .from('turnos')
+            .select('*')
+            .order('fecha', { ascending: true })
+            .order('hora', { ascending: true });
+    
+        if (error) {
+            console.error('Error cargando turnos:', error);
+            mostrarNotificacion('Error al cargar turnos', 'error');
+            return;
+        }
+    
+        turnosReservados = data;
+        renderizarTablaFiltrada();
+        actualizarEstadisticas();
+    }
+    
+    function renderizarTablaFiltrada() {
+        const container = document.getElementById('turnos-admin-container');
+        if (!container) return;
+    
+        const fFecha = document.getElementById('filtro-fecha')?.value;
+        const fBarbero = document.getElementById('filtro-barbero')?.value;
+        const fEstado = document.getElementById('filtro-estado')?.value;
+    
+        let filtrados = turnosReservados.filter(t => {
+            const matchFecha = !fFecha || t.fecha === fFecha;
+            const matchBarbero = !fBarbero || t.barbero_id == fBarbero;
+            const matchEstado = !fEstado || 
+                               (fEstado === 'pendiente' && !t.completado) || 
+                               (fEstado === 'completado' && t.completado);
+            return matchFecha && matchBarbero && matchEstado;
         });
-    });
-}
-
-// Cambiar disponibilidad de barbero desde admin
-function cambiarDisponibilidadAdmin(id) {
-    barberos = JSON.parse(localStorage.getItem('barberos')) || [];
-    const barberoIndex = barberos.findIndex(b => b.id === id);
     
-    if (barberoIndex !== -1) {
-        barberos[barberoIndex].disponible = !barberos[barberoIndex].disponible;
-        localStorage.setItem('barberos', JSON.stringify(barberos));
-        
-        // Disparar evento storage para actualizar la otra pestaña
-        window.dispatchEvent(new Event('storage'));
-        
-        // Recargar barberos en admin
-        cargarBarberosAdmin();
-        
-        // Mostrar notificación
-        mostrarNotificacionAdmin(`${barberos[barberoIndex].nombre} ahora está ${barberos[barberoIndex].disponible ? 'disponible' : 'no disponible'}`, 'exito');
-    }
-}
-
-// Cargar turnos en el panel de administración
-function cargarTurnosAdmin() {
-    const container = document.getElementById('turnos-admin-container');
-    if (!container) return;
+        if (filtrados.length === 0) {
+            container.innerHTML = `
+                <div class="sin-turnos">
+                    <i class="fas fa-calendar-times"></i>
+                    <p>No hay turnos con esos filtros</p>
+                    <p class="subtitulo">Intenta con otros criterios de búsqueda</p>
+                </div>
+            `;
+            return;
+        }
     
-    container.innerHTML = '';
-    
-    // Obtener valores de filtros
-    const filtroFecha = document.getElementById('filtro-fecha').value;
-    const filtroBarbero = document.getElementById('filtro-barbero').value;
-    const filtroEstado = document.getElementById('filtro-estado').value;
-    
-    // Aplicar filtros
-    let turnosFiltrados = [...turnosReservados];
-    
-    if (filtroFecha) {
-        turnosFiltrados = turnosFiltrados.filter(turno => turno.fecha === filtroFecha);
-    }
-    
-    if (filtroBarbero) {
-        turnosFiltrados = turnosFiltrados.filter(turno => turno.barberoId === parseInt(filtroBarbero));
-    }
-    
-    if (filtroEstado === 'pendiente') {
-        turnosFiltrados = turnosFiltrados.filter(turno => !turno.completado);
-    } else if (filtroEstado === 'completado') {
-        turnosFiltrados = turnosFiltrados.filter(turno => turno.completado);
-    }
-    
-    // Ordenar por fecha y hora
-    turnosFiltrados.sort((a, b) => {
-        const fechaA = new Date(a.fecha + ' ' + a.hora);
-        const fechaB = new Date(b.fecha + ' ' + b.hora);
-        return fechaA - fechaB;
-    });
-    
-    if (turnosFiltrados.length === 0) {
-        container.innerHTML = '<p class="sin-turnos">No hay turnos que coincidan con los filtros.</p>';
-        return;
-    }
-    
-    // Crear tabla de turnos
-    const tabla = document.createElement('div');
-    tabla.className = 'tabla-turnos-admin';
-    
-    // Crear encabezado
-    tabla.innerHTML = `
-        <div class="fila encabezado">
-            <div class="columna">Cliente</div>
-            <div class="columna">Teléfono</div>
-            <div class="columna">Barbero</div>
-            <div class="columna">Fecha</div>
-            <div class="columna">Hora</div>
-            <div class="columna">Estado</div>
-            <div class="columna">Acciones</div>
-        </div>
-    `;
-    
-    // Agregar filas para cada turno
-    turnosFiltrados.forEach(turno => {
-        const fila = document.createElement('div');
-        fila.className = `fila ${turno.completado ? 'completado' : ''}`;
-        
-        fila.innerHTML = `
-            <div class="columna">${turno.cliente}</div>
-            <div class="columna">${turno.telefono}</div>
-            <div class="columna">${turno.barbero}</div>
-            <div class="columna">${formatearFecha(turno.fecha)}</div>
-            <div class="columna">${turno.hora}</div>
-            <div class="columna">
-                <span class="estado-turno ${turno.completado ? 'completado' : 'pendiente'}">
-                    ${turno.completado ? 'Completado' : 'Pendiente'}
-                </span>
-            </div>
-            <div class="columna acciones">
-                ${!turno.completado ? 
-                    `<button class="btn-secundario completar-turno" data-id="${turno.id}">
-                        <i class="fas fa-check"></i> Completar
-                    </button>` : 
-                    ''
-                }
-                <button class="btn-danger eliminar-turno" data-id="${turno.id}">
-                    <i class="fas fa-trash"></i> Eliminar
-                </button>
+        let html = `
+            <div class="fila encabezado">
+                <div class="columna">Cliente</div>
+                <div class="columna">Barbero</div>
+                <div class="columna">Servicios</div>
+                <div class="columna">Precio</div>
+                <div class="columna">Fecha</div>
+                <div class="columna">Hora</div>
+                <div class="columna">Estado</div>
+                <div class="columna">Acciones</div>
             </div>
         `;
-        
-        tabla.appendChild(fila);
-    });
     
-    container.appendChild(tabla);
-    
-    // Configurar eventos para los botones
-    document.querySelectorAll('.completar-turno').forEach(button => {
-        button.addEventListener('click', function() {
-            const id = parseInt(this.getAttribute('data-id'));
-            completarTurno(id);
-        });
-    });
-    
-    document.querySelectorAll('.eliminar-turno').forEach(button => {
-        button.addEventListener('click', function() {
-            const id = parseInt(this.getAttribute('data-id'));
-            eliminarTurno(id);
-        });
-    });
-}
-
-// Marcar un turno como completado
-function completarTurno(id) {
-    if (confirm('¿Marcar este turno como completado?')) {
-        const turnos = JSON.parse(localStorage.getItem('turnosReservados')) || [];
-        const turnoIndex = turnos.findIndex(turno => turno.id === id);
-        
-        if (turnoIndex !== -1) {
-            turnos[turnoIndex].completado = true;
-            localStorage.setItem('turnosReservados', JSON.stringify(turnos));
+        filtrados.forEach(t => {
+            const barbero = barberos.find(b => b.id == t.barbero_id);
+            const barberoNombre = barbero ? barbero.nombre : `ID: ${t.barbero_id}`;
             
-            // Actualizar datos y vista
-            turnosReservados = turnos;
-            cargarTurnosAdmin();
-            actualizarEstadisticas();
-            
-            mostrarNotificacionAdmin('Turno marcado como completado', 'exito');
+            const serviciosTxt = Array.isArray(t.servicios) ? 
+                t.servicios.map(s => s.nombre).join(' + ') : 
+                'Ver detalle';
+                
+            const estadoClase = t.completado ? 'completado' : 'pendiente';
+            const estadoTexto = t.completado ? 'Completado' : 'Pendiente';
+                
+            html += `
+                <div class="fila ${t.completado ? 'completado' : ''}">
+                    <div class="columna" data-label="Cliente">
+                        <strong>${t.cliente}</strong><br>
+                        <small>${t.telefono}</small>
+                    </div>
+                    <div class="columna" data-label="Barbero">${barberoNombre}</div>
+                    <div class="columna" data-label="Servicios">${serviciosTxt}</div>
+                    <div class="columna" data-label="Precio">${(t.precio_total || 0).toLocaleString('es-PY')} Gs</div>
+                    <div class="columna" data-label="Fecha">${t.fecha}</div>
+                    <div class="columna" data-label="Hora">${t.hora} hs</div>
+                    <div class="columna" data-label="Estado">
+                        <span class="estado-turno ${estadoClase}">${estadoTexto}</span>
+                    </div>
+                    <div class="columna acciones" data-label="Acciones">
+                        ${!t.completado ? `
+                            <button class="btn-secundario" onclick="marcarCompletado(${t.id})">
+                                <i class="fas fa-check"></i> Cobrar
+                            </button>` : ''}
+                        <button class="btn-danger" onclick="eliminarTurno(${t.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+    
+        container.innerHTML = html;
+    }
+    
+    window.marcarCompletado = async function(id) {
+        const { error } = await _supabase
+            .from('turnos')
+            .update({ completado: true })
+            .eq('id', id);
+    
+        if (error) {
+            console.error("Error al cobrar turno:", error);
+            mostrarNotificacion("Error al actualizar el turno", "error");
+        } else {
+            mostrarNotificacion("¡Turno cobrado exitosamente!", "exito");
+        }
+    };
+    
+    window.eliminarTurno = async function(id) {
+        if (!confirm("¿Eliminar este registro permanentemente?")) {
+            return;
+        }
+        
+        const { error } = await _supabase
+            .from('turnos')
+            .delete()
+            .eq('id', id);
+    
+        if (error) {
+            console.error("Error al eliminar turno:", error);
+            mostrarNotificacion("Error al eliminar el turno", "error");
+        } else {
+            mostrarNotificacion("Registro eliminado", "error");
+        }
+    };
+    
+    // 9. ESTADÍSTICAS
+    function actualizarEstadisticas() {
+        const hoy = new Date().toISOString().split('T')[0];
+        
+        const turnosHoy = turnosReservados.filter(t => t.fecha === hoy).length;
+        const pendientes = turnosReservados.filter(t => !t.completado).length;
+        const completados = turnosReservados.filter(t => t.completado).length;
+        const totalTurnos = turnosReservados.length;
+        const ingresosTotal = turnosReservados
+            .filter(t => t.completado)
+            .reduce((sum, t) => sum + (t.precio_total || 0), 0);
+    
+        // Actualizar elementos
+        document.getElementById('turnos-hoy').textContent = turnosHoy;
+        document.getElementById('turnos-pendientes').textContent = pendientes;
+        document.getElementById('turnos-completados').textContent = completados;
+        document.getElementById('total-turnos').textContent = totalTurnos;
+        document.getElementById('ingresos-totales').textContent = ingresosTotal.toLocaleString('es-PY') + ' Gs';
+    }
+    
+    // 10. FUNCIONES AUXILIARES
+    function verificarAcceso() {
+        const auth = sessionStorage.getItem('admin-authenticated');
+        if (auth !== 'admin123') {
+            const pass = prompt("Contraseña de Administrador:");
+            if (pass === "admin123") {
+                sessionStorage.setItem('admin-authenticated', 'admin123');
+            } else {
+                window.location.href = 'index.html';
+            }
         }
     }
-}
-
-// Eliminar un turno
-function eliminarTurno(id) {
-    if (confirm('¿Eliminar permanentemente este turno?')) {
-        const nuevosTurnos = turnosReservados.filter(turno => turno.id !== id);
-        localStorage.setItem('turnosReservados', JSON.stringify(nuevosTurnos));
+    
+    function configurarEventos() {
+        // Eventos de filtros de turnos
+        const filtros = ['filtro-fecha', 'filtro-barbero', 'filtro-estado'];
+        filtros.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('change', renderizarTablaFiltrada);
+        });
+    
+        if (document.getElementById('limpiar-filtros')) {
+            document.getElementById('limpiar-filtros').addEventListener('click', () => {
+                filtros.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.value = '';
+                });
+                renderizarTablaFiltrada();
+            });
+        }
         
-        // Actualizar datos y vista
-        turnosReservados = nuevosTurnos;
-        cargarTurnosAdmin();
-        actualizarEstadisticas();
-        
-        mostrarNotificacionAdmin('Turno eliminado permanentemente', 'exito');
-    }
-}
-
-// Actualizar estadísticas
-function actualizarEstadisticas() {
-    const hoy = new Date().toISOString().split('T')[0];
-    const turnosHoy = turnosReservados.filter(t => t.fecha === hoy && !t.completado).length;
-    const turnosPendientes = turnosReservados.filter(t => !t.completado).length;
-    const turnosCompletados = turnosReservados.filter(t => t.completado).length;
-    const totalTurnos = turnosReservados.length;
-    
-    // Actualizar elementos si existen
-    const hoyElement = document.getElementById('turnos-hoy');
-    const pendientesElement = document.getElementById('turnos-pendientes');
-    const completadosElement = document.getElementById('turnos-completados');
-    const totalElement = document.getElementById('total-turnos');
-    
-    if (hoyElement) hoyElement.textContent = turnosHoy;
-    if (pendientesElement) pendientesElement.textContent = turnosPendientes;
-    if (completadosElement) completadosElement.textContent = turnosCompletados;
-    if (totalElement) totalElement.textContent = totalTurnos;
-}
-
-// Mostrar notificación en panel admin
-function mostrarNotificacionAdmin(texto, tipo) {
-    // Crear elemento de notificación si no existe
-    let notificacion = document.getElementById('notificacion-admin');
-    
-    if (!notificacion) {
-        notificacion = document.createElement('div');
-        notificacion.id = 'notificacion-admin';
-        document.body.appendChild(notificacion);
+        // Evento para exportar datos
+        const btnExportar = document.getElementById('btn-exportar');
+        if (btnExportar) {
+            btnExportar.addEventListener('click', exportarDatos);
+        }
     }
     
-    notificacion.textContent = texto;
-    notificacion.className = `notificacion-admin notificacion-${tipo}`;
+    function configurarSuscripcionesRealtime() {
+        // Suscripción para turnos
+        _supabase
+            .channel('admin-updates')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'turnos' }, () => {
+                console.log("Cambio detectado en turnos, recargando...");
+                cargarTurnosAdmin();
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'barberos' }, () => {
+                console.log("Cambio detectado en barberos, recargando...");
+                cargarBarberosDesdeSupabase();
+            })
+            .subscribe();
+    }
     
-    // Mostrar notificación
-    notificacion.style.display = 'block';
+    function mostrarNotificacion(texto, tipo) {
+        let notif = document.getElementById('notificacion-admin');
+        if (!notif) {
+            notif = document.createElement('div');
+            notif.id = 'notificacion-admin';
+            document.body.appendChild(notif);
+        }
+        
+        notif.textContent = texto;
+        notif.className = `notificacion-admin notificacion-${tipo}`;
+        notif.style.display = 'block';
+        
+        setTimeout(() => {
+            notif.style.display = 'none';
+        }, 3000);
+    }
     
-    // Ocultar después de 3 segundos
-    setTimeout(() => {
-        notificacion.style.display = 'none';
-    }, 3000);
-}
-
-// Formatear fecha para mostrar
-function formatearFecha(fechaStr) {
-    const opciones = { day: '2-digit', month: '2-digit', year: 'numeric' };
-    const fecha = new Date(fechaStr);
-    return fecha.toLocaleDateString('es-ES', opciones);
-}
-
-// Añadir estilos CSS para el panel admin
-function agregarEstilosAdmin() {
-    const estilos = `
-        <style>
-            .tabla-turnos-admin {
-                background-color: white;
-                border-radius: 10px;
-                overflow: hidden;
-                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-                margin-bottom: 20px;
+    function exportarDatos() {
+        // Crear datos para exportar
+        const datos = {
+            barberos: barberos,
+            turnos: turnosReservados,
+            estadisticas: {
+                fecha: new Date().toLocaleString('es-PY'),
+                totalTurnos: turnosReservados.length,
+                ingresosTotales: turnosReservados
+                    .filter(t => t.completado)
+                    .reduce((sum, t) => sum + (t.precio_total || 0), 0)
             }
-            
-            .fila {
-                display: grid;
-                grid-template-columns: repeat(7, 1fr);
-                gap: 10px;
-                padding: 15px;
-                align-items: center;
-                border-bottom: 1px solid #eee;
-            }
-            
-            .fila.encabezado {
-                background-color: #2d2d2d;
-                color: white;
-                font-weight: 600;
-            }
-            
-            .fila.completado {
-                opacity: 0.7;
-                background-color: #f9f9f9;
-            }
-            
-            .columna {
-                padding: 5px;
-                font-size: 0.9rem;
-            }
-            
-            .acciones {
-                display: flex;
-                gap: 5px;
-                flex-wrap: wrap;
-            }
-            
-            .estado-turno {
-                padding: 5px 10px;
-                border-radius: 20px;
-                font-size: 0.8rem;
-                font-weight: 500;
-                display: inline-block;
-            }
-            
-            .estado-turno.pendiente {
-                background-color: #ff9800;
-                color: white;
-            }
-            
-            .estado-turno.completado {
-                background-color: #4CAF50;
-                color: white;
-            }
-            
-            .barbero-card-admin {
-                background-color: white;
-                border-radius: 10px;
-                overflow: hidden;
-                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-                margin-bottom: 15px;
-            }
-            
-            .notificacion-admin {
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                padding: 15px 20px;
-                border-radius: 5px;
-                color: white;
-                font-weight: 500;
-                z-index: 10000;
-                display: none;
-                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-            }
-            
-            .notificacion-exito {
-                background-color: #4CAF50;
-            }
-            
-            .notificacion-error {
-                background-color: #f44336;
-            }
-            
-            .sin-turnos {
-                text-align: center;
-                padding: 30px;
-                color: #666;
-            }
-            
-            .filtros {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 15px;
-                margin-bottom: 20px;
-            }
-            
-            .estadisticas-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 15px;
-                margin-bottom: 20px;
-            }
-            
-            .estadistica-card {
-                background-color: white;
-                padding: 20px;
-                border-radius: 10px;
-                text-align: center;
-                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            }
-            
-            .estadistica-card h3 {
-                font-size: 1rem;
-                margin-bottom: 10px;
-                color: #666;
-            }
-            
-            .estadistica-card p {
-                font-size: 2rem;
-                font-weight: 700;
-                color: #d4af37;
-            }
-            
-            /* Responsive para panel admin */
-            @media (max-width: 1024px) {
-                .fila {
-                    grid-template-columns: repeat(4, 1fr);
-                }
-                
-                .fila .columna:nth-child(1),
-                .fila .columna:nth-child(2),
-                .fila .columna:nth-child(6) {
-                    display: none;
-                }
-            }
-            
-            @media (max-width: 768px) {
-                .fila {
-                    grid-template-columns: 1fr;
-                    gap: 10px;
-                    padding: 15px;
-                    border-bottom: 2px solid #eee;
-                }
-                
-                .fila.encabezado {
-                    display: none;
-                }
-                
-                .columna {
-                    display: flex;
-                    justify-content: space-between;
-                    border-bottom: 1px solid #f0f0f0;
-                    padding: 8px 0;
-                }
-                
-                .columna:before {
-                    content: attr(data-label);
-                    font-weight: 600;
-                    color: #666;
-                }
-                
-                .acciones {
-                    justify-content: center;
-                    padding-top: 10px;
-                    border-bottom: none;
-                }
-                
-                .acciones:before {
-                    display: none;
-                }
-                
-                .filtros {
-                    grid-template-columns: 1fr;
-                }
-                
-                .estadisticas-grid {
-                    grid-template-columns: repeat(2, 1fr);
-                }
-            }
-        </style>
-    `;
+        };
+        
+        // Convertir a JSON
+        const datosJSON = JSON.stringify(datos, null, 2);
+        
+        // Crear blob y descargar
+        const blob = new Blob([datosJSON], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `barberia_elite_datos_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        mostrarNotificacion('Datos exportados exitosamente', 'exito');
+    }
     
-    document.head.insertAdjacentHTML('beforeend', estilos);
+    
+    console.log("admin.js cargado correctamente con gestión de barberos");
 }
-
-// Agregar estilos cuando se cargue el admin
-agregarEstilosAdmin();

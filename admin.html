@@ -6,7 +6,6 @@
     <title>Barbería Elite - Panel de Administración</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <!-- Menú móvil -->
@@ -26,12 +25,6 @@
                     <li><a href="admin.html" class="active">Panel Admin</a></li>
                 </ul>
             </nav>
-            <nav class="nav-mobile">
-                <ul>
-                    <li><a href="index.html">Página Principal</a></li>
-                    <li><a href="admin.html" class="active">Panel Admin</a></li>
-                </ul>
-            </nav>
         </div>
     </header>
 
@@ -41,10 +34,10 @@
             <p>Gestiona la disponibilidad de barberos y los turnos reservados</p>
         </section>
 
-        <!-- Gestión de barberos -->
+        <!-- Sección de Gestión de Barberos -->
         <section class="barberos-admin-section">
             <h2>Gestión de Barberos</h2>
-            <div class="barberos-admin-container" id="barberos-admin-container">
+            <div class="barberos-grid" id="barberos-admin-container">
                 <!-- Barberos cargados dinámicamente -->
             </div>
         </section>
@@ -61,9 +54,6 @@
                     <label for="filtro-barbero">Barbero:</label>
                     <select id="filtro-barbero">
                         <option value="">Todos</option>
-                        <option value="1">Carlos Martínez</option>
-                        <option value="2">Jorge Rodríguez</option>
-                        <option value="3">Luis González</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -86,7 +76,7 @@
         <!-- Turnos reservados -->
         <section class="turnos-admin-section">
             <h2>Turnos Reservados</h2>
-            <div class="turnos-admin-container" id="turnos-admin-container">
+            <div class="tabla-turnos-admin" id="turnos-admin-container">
                 <!-- Turnos cargados dinámicamente -->
             </div>
         </section>
@@ -94,6 +84,9 @@
         <!-- Estadísticas -->
         <section class="estadisticas-section">
             <h2>Estadísticas</h2>
+            <button id="btn-exportar" class="btn-secundario" style="margin-bottom: 20px;">
+                <i class="fas fa-file-export"></i> Exportar Datos
+            </button>
             <div class="estadisticas-grid">
                 <div class="estadistica-card">
                     <h3>Turnos Hoy</h3>
@@ -111,6 +104,10 @@
                     <h3>Total Turnos</h3>
                     <p id="total-turnos">0</p>
                 </div>
+                <div class="estadistica-card">
+                    <h3>Ingresos Totales</h3>
+                    <p id="ingresos-totales">0 Gs</p>
+                </div>
             </div>
         </section>
     </main>
@@ -122,6 +119,8 @@
         </div>
     </footer>
 
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="admin.js"></script>
 </body>
 </html>

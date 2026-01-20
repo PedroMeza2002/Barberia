@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Denis Barber Shop - Reserva de Turnos</title>
+    <title>Barbería Elite - Reserva de Turnos</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -18,7 +18,7 @@
         <div class="container">
             <div class="logo">
                 <i class="fas fa-cut"></i>
-                <h1>Denis Barber Shop </h1>
+                <h1>Barbería Elite</h1>
             </div>
             <nav class="nav-desktop">
                 <ul>
@@ -41,11 +41,11 @@
             <p>Selecciona un barbero disponible y elige el horario que prefieras</p>
         </section>
 
-        <!-- Estado de barberos - Solo para visualización -->
+        <!-- Estado de barberos - Actualizado en tiempo real -->
         <section class="barberos-section">
-            <h2>Nuestros Barberos <span id="contador-disponibles"></span></h2>
+            <h2>Nuestros Barberos <span id="contador-disponibles" class="contador-badge"></span></h2>
             <div class="barberos-grid" id="barberos-container">
-                <!-- Barberos cargados dinámicamente con JS -->
+                <!-- Barberos cargados dinámicamente desde Supabase -->
             </div>
         </section>
 
@@ -69,6 +69,15 @@
                         <option value="">Selecciona un barbero</option>
                         <!-- Opciones cargadas dinámicamente -->
                     </select>
+                    <small class="texto-ayuda">Solo se muestran barberos disponibles</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>Selecciona servicios (puedes elegir varios):</label>
+                    <div class="servicios-checkbox-container" id="servicios-container">
+                        <!-- Checkboxes cargados dinámicamente -->
+                    </div>
+                    <div id="total-precio" class="total-precio"></div>
                 </div>
                 
                 <div class="form-group">
@@ -95,19 +104,21 @@
         <section class="turnos-reservados">
             <h2>Tus Turnos Reservados</h2>
             <div class="turnos-container" id="turnos-container">
-                <!-- Turnos cargados dinámicamente -->
+                <!-- Turnos cargados dinámicamente desde Supabase -->
             </div>
         </section>
+        
     </main>
 
     <footer>
         <div class="container">
-            <p><i class="fas fa-clock"></i> Horario: Lunes a Sábado 9:00 - 18:00</p>
-            <p><i class="fas fa-phone"></i> Teléfono: 0981111111</p>
+            <p><i class="fas fa-clock"></i> Horario: Martes a Sábado 8:00 - 11:30 / 13:00 - 19:00</p>
+            <p><i class="fas fa-phone"></i> Teléfono: 555-1234</p>
             <p>&copy; 2023 Barbería Elite. Todos los derechos reservados.</p>
         </div>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="script.js"></script>
 </body>
 </html>
