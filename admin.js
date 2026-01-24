@@ -1,63 +1,53 @@
 // ============================================
-// ADMIN.JS - Sistema de Gestión de Barbería
+// ADMIN.JS - Sistema de Gestión de Barbería (ACTUALIZADO)
 // ============================================
 
 // 1. CONFIGURACIÓN SUPABASE
 const SUPABASE_URL = 'https://hcueuizcuiwscxqcmabn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_4nmQhV4bchtTGumi5J2qSA_7Rli-O1m';
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Verificar si Supabase está disponible
-if (typeof supabase === 'undefined') {
-    console.error("Supabase no está cargado");
-    document.addEventListener('DOMContentLoaded', function() {
-        alert("Error: Supabase no está disponible. Recarga la página.");
-    });
-} else {
-    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// Variables de estado global
+let turnosReservados = [];
+let barberos = [];
+
+// 2. INICIALIZACIÓN
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("Inicializando sistema administrativo...");
     
-    // Variables de estado global
-    let turnosReservados = [];
-    let barberos = [];
+    // Verificar acceso de administrador
+    verificarAcceso();
     
-    // 2. INICIALIZACIÓN
-    document.addEventListener('DOMContentLoaded', async function() {
-        console.log("Inicializando sistema administrativo...");
-        
-        // Verificar acceso de administrador
-        verificarAcceso();
-        
-        // Cargar datos iniciales
-        await cargarDatosIniciales();
-        
-        // Configurar eventos
-        configurarEventos();
-        
-        // Suscripción realtime para actualizaciones automáticas
-        configurarSuscripcionesRealtime();
-    });
+    // Cargar datos iniciales
+    cargarDatosIniciales();
     
-    // 3. FUNCIONES DE CARGA DE DATOS
-    async function cargarDatosIniciales() {
-        try {
-            console.log("Cargando datos iniciales...");
-            
-            // Cargar barberos primero
-            await cargarBarberosDesdeSupabase();
-            
-            // Cargar turnos después
-            await cargarTurnosAdmin();
-            
-            console.log("Datos cargados exitosamente");
-        } catch (error) {
-            console.error("Error al cargar datos iniciales:", error);
-            mostrarNotificacion("Error al cargar datos", "error");
-        }
+    // Configurar eventos
+    configurarEventos();
+});
+
+// 3. FUNCIONES DE CARGA DE DATOS
+async function cargarDatosIniciales() {
+    try {
+        console.log("Cargando datos iniciales...");
+        
+        // Cargar barberos primero
+        await cargarBarberosDesdeSupabase();
+        
+        // Cargar turnos después
+        await cargarTurnosAdmin();
+        
+        console.log("Datos cargados exitosamente");
+    } catch (error) {
+        console.error("Error al cargar datos iniciales:", error);
+        mostrarNotificacion("Error al cargar datos", "error");
     }
+}
+
+// 4. CARGA DE BARBEROS DESDE SUPABASE
+async function cargarBarberosDesdeSupabase() {
+    console.log("Cargando barberos desde Supabase...");
     
-    // 4. CARGA DE BARBEROS DESDE SUPABASE
-    async function cargarBarberosDesdeSupabase() {
-        console.log("Cargando barberos desde Supabase...");
-        
+    try {
         const { data: barberosDB, error } = await _supabase
             .from('barberos')
             .select('*')
@@ -65,171 +55,177 @@ if (typeof supabase === 'undefined') {
         
         if (error) {
             console.error("Error al cargar barberos:", error);
-            
-            // Usar datos locales temporalmente
-            barberos = [
-                { 
-                    id: 1, 
-                    nombre: "Denis", 
-                    especialidad: "Corte y barba", 
-                    activo: true,
-                    telefono: "",
-                    email: "",
-                    horario: "Lunes a Viernes: 9:00-18:00"
-                },
-                { 
-                    id: 2, 
-                    nombre: "Leo", 
-                    especialidad: "Corte y barba", 
-                    activo: true,
-                    telefono: "",
-                    email: "",
-                    horario: "Martes a Sábado: 10:00-19:00"
-                },
-                { 
-                    id: 3, 
-                    nombre: "Silva", 
-                    especialidad: "Corte y barba", 
-                    activo: true,
-                    telefono: "",
-                    email: "",
-                    horario: "Lunes a Sábado: 8:00-17:00"
-                }
-            ];
-            
-            mostrarNotificacion("Usando barberos predeterminados. Verifica tu conexión.", "advertencia");
-        } else {
-            // Procesar barberos para asegurar que todos los campos existan
-            barberos = barberosDB.map(barbero => ({
-                id: barbero.id,
-                nombre: barbero.nombre || "Sin nombre",
-                especialidad: barbero.especialidad || "Sin especialidad",
-                activo: barbero.activo !== false, // Default true
-                telefono: barbero.telefono || "",
-                email: barbero.email || "",
-                horario: barbero.horario || "Horario no definido",
-                created_at: barbero.created_at || new Date().toISOString()
-            }));
+            mostrarNotificacion("Error al cargar barberos", "error");
+            return;
         }
         
-        console.log(`Barberos cargados: ${barberos.length}`);
+        console.log("Barberos recibidos de Supabase:", barberosDB);
+        
+        // Procesar barberos para manejar valores nulos
+        barberos = barberosDB.map(barbero => ({
+            id: barbero.id,
+            nombre: barbero.nombre || "Sin nombre",
+            especialidad: barbero.especialidad || "Sin especialidad",
+            activo: barbero.activo !== false,
+            telefono: barbero.telefono || "No registrado",
+            email: barbero.email || "No registrado",
+            horario: barbero.horario || "Horario no definido",
+            created_at: barbero.created_at || new Date().toISOString()
+        }));
+        
+        console.log(`Barberos procesados: ${barberos.length}`);
         
         // Renderizar barberos y actualizar select de filtros
         renderizarBarberosAdmin();
         actualizarSelectBarberos();
+        
+    } catch (error) {
+        console.error("Error en cargarBarberosDesdeSupabase:", error);
+    }
+}
+
+// 5. RENDERIZADO DE BARBEROS EN LA INTERFAZ
+function renderizarBarberosAdmin() {
+    const container = document.getElementById('barberos-admin-container');
+    if (!container) {
+        console.error("ERROR: No se encontró #barberos-admin-container");
+        return;
     }
     
-    // 5. RENDERIZADO DE BARBEROS EN LA INTERFAZ
-    function renderizarBarberosAdmin() {
-        const container = document.getElementById('barberos-admin-container');
-        if (!container) {
-            console.log("Contenedor de barberos no encontrado.");
-            return;
-        }
-        
-        if (barberos.length === 0) {
-            container.innerHTML = `
-                <div class="sin-turnos">
-                    <i class="fas fa-user-slash"></i>
-                    <p>No hay barberos registrados</p>
-                    <button class="btn-primary" onclick="mostrarModalNuevoBarbero()">
-                        <i class="fas fa-plus"></i> Agregar Primer Barbero
-                    </button>
-                </div>
-            `;
-            return;
-        }
-        
-        let html = '';
-        
-        barberos.forEach(barbero => {
-            html += `
-                <div class="barbero-card-admin ${!barbero.activo ? 'completado' : ''}">
-                    <div class="barbero-header">
-                        <div class="barbero-nombre">${barbero.nombre}</div>
-                        <div class="estado ${barbero.activo ? 'estado-disponible' : 'estado-no-disponible'}">
-                            ${barbero.activo ? 'Activo' : 'Inactivo'}
-                        </div>
-                    </div>
-                    
-                    <div class="barbero-info">
-                        <p class="barbero-especialidad">${barbero.especialidad}</p>
-                        
-                        <div class="turno-detalle">
-                            <i class="fas fa-phone"></i>
-                            <span>${barbero.telefono || 'No registrado'}</span>
-                        </div>
-                        
-                        <div class="turno-detalle">
-                            <i class="fas fa-envelope"></i>
-                            <span>${barbero.email || 'No registrado'}</span>
-                        </div>
-                        
-                        <div class="turno-detalle">
-                            <i class="fas fa-clock"></i>
-                            <span>${barbero.horario}</span>
-                        </div>
-                    </div>
-                    
-                    <div class="barbero-acciones" style="padding: 15px; border-top: 1px solid #eee;">
-                        <button class="btn-secundario btn-sm" onclick="toggleActivoBarbero(${barbero.id}, ${!barbero.activo})" style="margin-right: 10px;">
-                            <i class="fas fa-power-off"></i> ${barbero.activo ? 'Desactivar' : 'Activar'}
-                        </button>
-                        <button class="btn-editar" onclick="editarBarbero(${barbero.id})" style="margin-right: 10px;">
-                            <i class="fas fa-edit"></i> Editar
-                        </button>
-                        <button class="btn-danger" onclick="eliminarBarbero(${barbero.id})">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            `;
-        });
-        
-        // Añadir botón para nuevo barbero
-        html += `
-            <div class="barbero-card-admin" style="text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 2px dashed #d4af37;">
-                <i class="fas fa-user-plus" style="font-size: 2.5rem; color: #d4af37; margin-bottom: 15px;"></i>
-                <p style="margin-bottom: 20px; color: #666;">Agregar nuevo barbero</p>
-                <button class="btn-primary" onclick="mostrarModalNuevoBarbero()" style="max-width: 200px;">
-                    <i class="fas fa-plus"></i> Nuevo Barbero
+    console.log("Renderizando barberos...");
+    
+    if (barberos.length === 0) {
+        container.innerHTML = `
+            <div class="sin-turnos">
+                <i class="fas fa-user-slash"></i>
+                <p>No hay barberos registrados</p>
+                <button class="btn-primary" onclick="mostrarModalNuevoBarbero()">
+                    <i class="fas fa-plus"></i> Agregar Primer Barbero
                 </button>
             </div>
         `;
-        
-        container.innerHTML = html;
+        return;
     }
     
-    function actualizarSelectBarberos() {
-        const select = document.getElementById('filtro-barbero');
-        if (!select) return;
+    let html = '';
+    
+    barberos.forEach(barbero => {
+        const telefono = barbero.telefono === "No registrado" ? 
+            '<span style="color: #999;">No registrado</span>' : 
+            barbero.telefono;
+            
+        const email = barbero.email === "No registrado" ? 
+            '<span style="color: #999;">No registrado</span>' : 
+            barbero.email;
         
-        // Guardar el valor seleccionado actual
-        const valorActual = select.value;
-        
-        // Limpiar opciones excepto la primera
-        while (select.options.length > 1) {
-            select.remove(1);
-        }
-        
-        // Añadir barberos
-        barberos.forEach(barbero => {
-            if (barbero.activo) {
-                const option = document.createElement('option');
-                option.value = barbero.id;
-                option.textContent = barbero.nombre;
-                select.appendChild(option);
-            }
-        });
-        
-        // Restaurar el valor seleccionado si existe
-        if (valorActual && [...select.options].some(opt => opt.value === valorActual)) {
-            select.value = valorActual;
-        }
+        html += `
+            <div class="barbero-card-admin ${!barbero.activo ? 'inactivo' : ''}" style="opacity: ${barbero.activo ? '1' : '0.7'};">
+                <div class="barbero-header">
+                    <div class="barbero-nombre">${barbero.nombre}</div>
+                    <div class="estado ${barbero.activo ? 'estado-disponible' : 'estado-no-disponible'}">
+                        ${barbero.activo ? 'Activo' : 'Inactivo'}
+                    </div>
+                </div>
+                
+                <div class="barbero-info">
+                    <p class="barbero-especialidad"><strong>Especialidad:</strong> ${barbero.especialidad}</p>
+                    
+                    <div class="turno-detalle">
+                        <i class="fas fa-phone"></i>
+                        <span>${telefono}</span>
+                    </div>
+                    
+                    <div class="turno-detalle">
+                        <i class="fas fa-envelope"></i>
+                        <span>${email}</span>
+                    </div>
+                    
+                    <div class="turno-detalle">
+                        <i class="fas fa-clock"></i>
+                        <span><strong>Horario:</strong> ${barbero.horario}</span>
+                    </div>
+                </div>
+                
+                <div class="barbero-acciones" style="padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px; justify-content: flex-end;">
+                    <button class="btn-secundario" onclick="toggleActivoBarbero(${barbero.id})" style="padding: 8px 15px;">
+                        <i class="fas fa-power-off"></i> ${barbero.activo ? 'Desactivar' : 'Activar'}
+                    </button>
+                    <button class="btn-editar" onclick="editarBarbero(${barbero.id})" style="padding: 8px 15px; background: #ffc107; color: #000; border: none; border-radius: 4px; cursor: pointer;">
+                        <i class="fas fa-edit"></i> Editar
+                    </button>
+                    <button class="btn-danger" onclick="eliminarBarbero(${barbero.id})" style="padding: 8px 15px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    
+    // Añadir botón para nuevo barbero
+    html += `
+        <div class="barbero-card-admin" style="text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 2px dashed #d4af37; min-height: 200px;">
+            <i class="fas fa-user-plus" style="font-size: 2.5rem; color: #d4af37; margin-bottom: 15px;"></i>
+            <p style="margin-bottom: 20px; color: #666;">Agregar nuevo barbero</p>
+            <button class="btn-primary" onclick="mostrarModalNuevoBarbero()" style="max-width: 200px; padding: 10px 20px;">
+                <i class="fas fa-plus"></i> Nuevo Barbero
+            </button>
+        </div>
+    `;
+    
+    container.innerHTML = html;
+}
+
+function actualizarSelectBarberos() {
+    const select = document.getElementById('filtro-barbero');
+    if (!select) return;
+    
+    // Guardar el valor seleccionado actual
+    const valorActual = select.value;
+    
+    // Limpiar opciones excepto la primera
+    while (select.options.length > 1) {
+        select.remove(1);
     }
     
-    // 6. FUNCIONES CRUD PARA BARBEROS
-    window.toggleActivoBarbero = async function(id, nuevoEstado) {
+    // Añadir barberos
+    barberos.forEach(barbero => {
+        if (barbero.activo) {
+            const option = document.createElement('option');
+            option.value = barbero.id;
+            option.textContent = barbero.nombre;
+            select.appendChild(option);
+        }
+    });
+    
+    // Restaurar el valor seleccionado si existe
+    if (valorActual && [...select.options].some(opt => opt.value === valorActual)) {
+        select.value = valorActual;
+    }
+}
+
+// 6. FUNCIONES PARA FORMATEAR FECHAS (NUEVAS)
+function formatearFechaAdmin(fechaISO) {
+    if (!fechaISO) return 'Sin fecha';
+    const [anio, mes, dia] = fechaISO.split('-');
+    return `${dia}/${mes}/${anio}`;
+}
+
+function convertirFechaAdmin(fechaDDMMYYYY) {
+    if (!fechaDDMMYYYY) return null;
+    const [dia, mes, anio] = fechaDDMMYYYY.split('/');
+    return `${anio}-${mes}-${dia}`;
+}
+
+// 7. FUNCIONES CRUD PARA BARBEROS
+async function toggleActivoBarbero(id) {
+    const barbero = barberos.find(b => b.id === id);
+    if (!barbero) return;
+    
+    const nuevoEstado = !barbero.activo;
+    
+    console.log(`Cambiando estado del barbero ${id} a ${nuevoEstado}`);
+    
+    try {
         const { error } = await _supabase
             .from('barberos')
             .update({ activo: nuevoEstado })
@@ -242,10 +238,7 @@ if (typeof supabase === 'undefined') {
         }
         
         // Actualizar localmente
-        const index = barberos.findIndex(b => b.id === id);
-        if (index !== -1) {
-            barberos[index].activo = nuevoEstado;
-        }
+        barbero.activo = nuevoEstado;
         
         // Recargar la interfaz
         renderizarBarberosAdmin();
@@ -254,36 +247,46 @@ if (typeof supabase === 'undefined') {
             `Barbero ${nuevoEstado ? 'activado' : 'desactivado'} exitosamente`,
             'exito'
         );
-    };
+        
+    } catch (error) {
+        console.error("Error en toggleActivoBarbero:", error);
+        mostrarNotificacion('Error al actualizar', 'error');
+    }
+}
+
+async function editarBarbero(id) {
+    const barbero = barberos.find(b => b.id === id);
+    if (!barbero) {
+        mostrarNotificacion('Barbero no encontrado', 'error');
+        return;
+    }
     
-    window.editarBarbero = async function(id) {
-        const barbero = barberos.find(b => b.id === id);
-        if (!barbero) {
-            mostrarNotificacion('Barbero no encontrado', 'error');
-            return;
-        }
-        
-        mostrarModalBarbero(barbero);
-    };
+    mostrarModalBarbero(barbero);
+}
+
+async function eliminarBarbero(id) {
+    // Verificar si tiene turnos asociados
+    const { data: turnosAsociados, error: errorTurnos } = await _supabase
+        .from('turnos')
+        .select('id, cliente, fecha')
+        .eq('barbero_id', id)
+        .eq('completado', false);
     
-    window.eliminarBarbero = async function(id) {
-        // Verificar si tiene turnos asociados
-        const { data: turnosAsociados } = await _supabase
-            .from('turnos')
-            .select('id, cliente, fecha')
-            .eq('barbero_id', id)
-            .eq('completado', false);
-        
-        let mensajeConfirmacion = '¿Eliminar este barbero permanentemente?';
-        
-        if (turnosAsociados && turnosAsociados.length > 0) {
-            mensajeConfirmacion = `Este barbero tiene ${turnosAsociados.length} turno(s) pendiente(s). ¿Seguro que quieres eliminarlo?`;
-        }
-        
-        if (!confirm(mensajeConfirmacion)) {
-            return;
-        }
-        
+    if (errorTurnos) {
+        console.error("Error al verificar turnos:", errorTurnos);
+    }
+    
+    let mensajeConfirmacion = '¿Eliminar este barbero permanentemente?';
+    
+    if (turnosAsociados && turnosAsociados.length > 0) {
+        mensajeConfirmacion = `Este barbero tiene ${turnosAsociados.length} turno(s) pendiente(s). ¿Seguro que quieres eliminarlo?`;
+    }
+    
+    if (!confirm(mensajeConfirmacion)) {
+        return;
+    }
+    
+    try {
         const { error } = await _supabase
             .from('barberos')
             .delete()
@@ -302,158 +305,193 @@ if (typeof supabase === 'undefined') {
         renderizarBarberosAdmin();
         actualizarSelectBarberos();
         mostrarNotificacion('Barbero eliminado exitosamente', 'exito');
-    };
-    
-    // 7. MODAL PARA NUEVO/EDITAR BARBERO
-    window.mostrarModalNuevoBarbero = function() {
-        mostrarModalBarbero();
-    };
-    
-    function mostrarModalBarbero(barberoExistente = null) {
-        const esNuevo = !barberoExistente;
         
-        const modalHTML = `
-            <div class="modal-overlay" id="modal-barbero" style="
-                position: fixed;
-                top: 0; left: 0; right: 0; bottom: 0;
-                background: rgba(0,0,0,0.7);
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                z-index: 10000;
-                padding: 20px;
+    } catch (error) {
+        console.error("Error en eliminarBarbero:", error);
+        mostrarNotificacion('Error al eliminar', 'error');
+    }
+}
+
+// 8. MODAL PARA NUEVO/EDITAR BARBERO
+function mostrarModalNuevoBarbero() {
+    mostrarModalBarbero();
+}
+
+function mostrarModalBarbero(barberoExistente = null) {
+    const esNuevo = !barberoExistente;
+    
+    const modalHTML = `
+        <div class="modal-overlay" id="modal-barbero" style="
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            padding: 20px;
+        ">
+            <div class="modal-content" style="
+                background: white;
+                border-radius: 10px;
+                max-width: 500px;
+                width: 100%;
+                max-height: 90vh;
+                overflow-y: auto;
+                box-shadow: 0 5px 20px rgba(0,0,0,0.3);
             ">
-                <div class="modal-content" style="
-                    background: white;
-                    border-radius: 10px;
-                    max-width: 500px;
-                    width: 100%;
-                    max-height: 90vh;
-                    overflow-y: auto;
+                <div class="modal-header" style="
+                    padding: 20px;
+                    border-bottom: 1px solid #eee;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    background: #2d2d2d;
+                    color: white;
+                    border-radius: 10px 10px 0 0;
                 ">
-                    <div class="modal-header" style="
-                        padding: 20px;
-                        border-bottom: 1px solid #eee;
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
+                    <h3 style="margin: 0; font-size: 1.2rem;">${esNuevo ? 'Nuevo Barbero' : 'Editar Barbero'}</h3>
+                    <button onclick="cerrarModalBarbero()" style="
+                        background: none;
+                        border: none;
+                        font-size: 1.5rem;
+                        color: white;
+                        cursor: pointer;
+                        padding: 5px;
+                    ">&times;</button>
+                </div>
+                
+                <div class="modal-body" style="padding: 25px;">
+                    <form id="form-barbero">
+                        <input type="hidden" id="barbero-id" value="${barberoExistente?.id || ''}">
+                        
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label for="barbero-nombre" style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">Nombre *</label>
+                            <input type="text" id="barbero-nombre" class="form-control" 
+                                   value="${barberoExistente?.nombre || ''}" 
+                                   placeholder="Ej: Juan Pérez" required
+                                   style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 1rem;">
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label for="barbero-especialidad" style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">Especialidad *</label>
+                            <input type="text" id="barbero-especialidad" class="form-control"
+                                   value="${barberoExistente?.especialidad || ''}"
+                                   placeholder="Ej: Cortes modernos, Barbas, etc." required
+                                   style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 1rem;">
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label for="barbero-telefono" style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">Teléfono</label>
+                            <input type="tel" id="barbero-telefono" class="form-control"
+                                   value="${barberoExistente?.telefono || ''}"
+                                   placeholder="Ej: 0981 123456"
+                                   style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 1rem;">
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label for="barbero-email" style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">Email</label>
+                            <input type="email" id="barbero-email" class="form-control"
+                                   value="${barberoExistente?.email || ''}"
+                                   placeholder="Ej: barbero@ejemplo.com"
+                                   style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 1rem;">
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label for="barbero-horario" style="display: block; margin-bottom: 8px; font-weight: 500; color: #333;">Horario de trabajo</label>
+                            <input type="text" id="barbero-horario" class="form-control"
+                                   value="${barberoExistente?.horario || ''}"
+                                   placeholder="Ej: Lunes a Viernes 9:00-18:00"
+                                   style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 1rem;">
+                        </div>
+                        
+                        ${!esNuevo ? `
+                        <div class="form-group" style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" id="barbero-activo" ${barberoExistente?.activo ? 'checked' : ''} 
+                                   style="width: 18px; height: 18px;">
+                            <label for="barbero-activo" style="font-weight: 500; color: #333; cursor: pointer;">
+                                Barbero activo (aparece disponible para turnos)
+                            </label>
+                        </div>
+                        ` : ''}
+                    </form>
+                </div>
+                
+                <div class="modal-footer" style="
+                    padding: 20px;
+                    border-top: 1px solid #eee;
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 15px;
+                ">
+                    <button class="btn-secundario" onclick="cerrarModalBarbero()" style="
+                        padding: 10px 20px;
+                        background: #6c757d;
+                        color: white;
+                        border: none;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-size: 1rem;
+                    ">Cancelar</button>
+                    <button class="btn-primary" onclick="guardarBarbero()" style="
+                        padding: 10px 20px;
+                        background: #d4af37;
+                        color: white;
+                        border: none;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-size: 1rem;
+                        font-weight: 500;
                     ">
-                        <h3 style="margin: 0; color: #1a1a1a;">${esNuevo ? 'Nuevo Barbero' : 'Editar Barbero'}</h3>
-                        <button onclick="cerrarModalBarbero()" style="
-                            background: none;
-                            border: none;
-                            font-size: 1.5rem;
-                            color: #666;
-                            cursor: pointer;
-                            padding: 5px;
-                        ">&times;</button>
-                    </div>
-                    
-                    <div class="modal-body" style="padding: 20px;">
-                        <form id="form-barbero" onsubmit="event.preventDefault(); guardarBarbero();">
-                            <input type="hidden" id="barbero-id" value="${barberoExistente?.id || ''}">
-                            
-                            <div class="form-group">
-                                <label for="barbero-nombre">Nombre *</label>
-                                <input type="text" id="barbero-nombre" class="form-control" 
-                                       value="${barberoExistente?.nombre || ''}" 
-                                       placeholder="Ej: Juan Pérez" required>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="barbero-especialidad">Especialidad *</label>
-                                <input type="text" id="barbero-especialidad" class="form-control"
-                                       value="${barberoExistente?.especialidad || ''}"
-                                       placeholder="Ej: Cortes modernos, Barbas, etc." required>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="barbero-telefono">Teléfono</label>
-                                <input type="tel" id="barbero-telefono" class="form-control"
-                                       value="${barberoExistente?.telefono || ''}"
-                                       placeholder="Ej: 0981 123456">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="barbero-email">Email</label>
-                                <input type="email" id="barbero-email" class="form-control"
-                                       value="${barberoExistente?.email || ''}"
-                                       placeholder="Ej: barbero@ejemplo.com">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="barbero-horario">Horario de trabajo</label>
-                                <input type="text" id="barbero-horario" class="form-control"
-                                       value="${barberoExistente?.horario || ''}"
-                                       placeholder="Ej: Lunes a Viernes 9:00-18:00">
-                            </div>
-                            
-                            ${!esNuevo ? `
-                            <div class="form-group">
-                                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                                    <input type="checkbox" id="barbero-activo" ${barberoExistente?.activo ? 'checked' : ''}>
-                                    <span>Barbero activo (aparece disponible para turnos)</span>
-                                </label>
-                            </div>
-                            ` : ''}
-                        </form>
-                    </div>
-                    
-                    <div class="modal-footer" style="
-                        padding: 20px;
-                        border-top: 1px solid #eee;
-                        display: flex;
-                        justify-content: flex-end;
-                        gap: 10px;
-                    ">
-                        <button class="btn-secundario" onclick="cerrarModalBarbero()">Cancelar</button>
-                        <button class="btn-primary" onclick="guardarBarbero()">
-                            ${esNuevo ? 'Crear Barbero' : 'Guardar Cambios'}
-                        </button>
-                    </div>
+                        ${esNuevo ? 'Crear Barbero' : 'Guardar Cambios'}
+                    </button>
                 </div>
             </div>
-        `;
-        
-        // Remover modal existente si hay
-        const modalExistente = document.getElementById('modal-barbero');
-        if (modalExistente) modalExistente.remove();
-        
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
-    }
+        </div>
+    `;
     
-    window.cerrarModalBarbero = function() {
-        const modal = document.getElementById('modal-barbero');
-        if (modal) modal.remove();
+    // Remover modal existente si hay
+    const modalExistente = document.getElementById('modal-barbero');
+    if (modalExistente) modalExistente.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+function cerrarModalBarbero() {
+    const modal = document.getElementById('modal-barbero');
+    if (modal) modal.remove();
+}
+
+async function guardarBarbero() {
+    // Obtener datos del formulario
+    const barberoData = {
+        nombre: document.getElementById('barbero-nombre').value.trim(),
+        especialidad: document.getElementById('barbero-especialidad').value.trim(),
+        telefono: document.getElementById('barbero-telefono').value.trim() || null,
+        email: document.getElementById('barbero-email').value.trim() || null,
+        horario: document.getElementById('barbero-horario').value.trim() || null
     };
     
-    window.guardarBarbero = async function() {
-        // Obtener datos del formulario
-        const barberoData = {
-            nombre: document.getElementById('barbero-nombre').value.trim(),
-            especialidad: document.getElementById('barbero-especialidad').value.trim(),
-            telefono: document.getElementById('barbero-telefono').value.trim(),
-            email: document.getElementById('barbero-email').value.trim(),
-            horario: document.getElementById('barbero-horario').value.trim()
-        };
-        
-        const id = document.getElementById('barbero-id').value;
-        const esNuevo = !id;
-        
-        // Validación
-        if (!barberoData.nombre || !barberoData.especialidad) {
-            mostrarNotificacion('Nombre y especialidad son requeridos', 'error');
-            return;
-        }
-        
-        // Si es edición, incluir el campo activo
-        if (!esNuevo) {
-            barberoData.activo = document.getElementById('barbero-activo').checked;
-        } else {
-            // Para nuevos barberos, activo por defecto
-            barberoData.activo = true;
-        }
-        
+    const id = document.getElementById('barbero-id').value;
+    const esNuevo = !id;
+    
+    // Validación
+    if (!barberoData.nombre || !barberoData.especialidad) {
+        mostrarNotificacion('Nombre y especialidad son requeridos', 'error');
+        return;
+    }
+    
+    // Si es edición, incluir el campo activo
+    if (!esNuevo) {
+        barberoData.activo = document.getElementById('barbero-activo').checked;
+    } else {
+        // Para nuevos barberos, activo por defecto
+        barberoData.activo = true;
+    }
+    
+    console.log(`${esNuevo ? 'Creando' : 'Actualizando'} barbero:`, barberoData);
+    
+    try {
         let result;
         if (esNuevo) {
             result = await _supabase
@@ -496,262 +534,361 @@ if (typeof supabase === 'undefined') {
             `Barbero ${esNuevo ? 'creado' : 'actualizado'} exitosamente`,
             'exito'
         );
-    };
-    
-    // 8. FUNCIONES EXISTENTES DE TURNOS
-    async function cargarTurnosAdmin() {
+        
+    } catch (error) {
+        console.error("Error en guardarBarbero:", error);
+        mostrarNotificacion('Error al guardar barbero', 'error');
+    }
+}
+
+// 9. FUNCIONES DE TURNOS (ACTUALIZADAS)
+async function cargarTurnosAdmin() {
+    try {
         const { data, error } = await _supabase
             .from('turnos')
             .select('*')
             .order('fecha', { ascending: true })
             .order('hora', { ascending: true });
-    
+
         if (error) {
             console.error('Error cargando turnos:', error);
             mostrarNotificacion('Error al cargar turnos', 'error');
             return;
         }
-    
-        turnosReservados = data;
+
+        turnosReservados = data || [];
         renderizarTablaFiltrada();
         actualizarEstadisticas();
+        console.log(`Turnos cargados: ${turnosReservados.length}`);
+        
+    } catch (error) {
+        console.error("Error en cargarTurnosAdmin:", error);
     }
-    
-    function renderizarTablaFiltrada() {
-        const container = document.getElementById('turnos-admin-container');
-        if (!container) return;
-    
-        const fFecha = document.getElementById('filtro-fecha')?.value;
-        const fBarbero = document.getElementById('filtro-barbero')?.value;
-        const fEstado = document.getElementById('filtro-estado')?.value;
-    
-        let filtrados = turnosReservados.filter(t => {
-            const matchFecha = !fFecha || t.fecha === fFecha;
-            const matchBarbero = !fBarbero || t.barbero_id == fBarbero;
-            const matchEstado = !fEstado || 
-                               (fEstado === 'pendiente' && !t.completado) || 
-                               (fEstado === 'completado' && t.completado);
-            return matchFecha && matchBarbero && matchEstado;
-        });
-    
-        if (filtrados.length === 0) {
-            container.innerHTML = `
-                <div class="sin-turnos">
-                    <i class="fas fa-calendar-times"></i>
-                    <p>No hay turnos con esos filtros</p>
-                    <p class="subtitulo">Intenta con otros criterios de búsqueda</p>
-                </div>
-            `;
-            return;
-        }
-    
-        let html = `
-            <div class="fila encabezado">
-                <div class="columna">Cliente</div>
-                <div class="columna">Barbero</div>
-                <div class="columna">Servicios</div>
-                <div class="columna">Precio</div>
-                <div class="columna">Fecha</div>
-                <div class="columna">Hora</div>
-                <div class="columna">Estado</div>
-                <div class="columna">Acciones</div>
+}
+
+function renderizarTablaFiltrada() {
+    const container = document.getElementById('turnos-admin-container');
+    if (!container) {
+        console.error("ERROR: No se encontró #turnos-admin-container");
+        return;
+    }
+
+    const fFecha = document.getElementById('filtro-fecha')?.value;
+    const fBarbero = document.getElementById('filtro-barbero')?.value;
+    const fEstado = document.getElementById('filtro-estado')?.value;
+
+    let filtrados = turnosReservados.filter(t => {
+        const fechaTurnoFormateada = formatearFechaAdmin(t.fecha);
+        
+        const matchFecha = !fFecha || fechaTurnoFormateada === fFecha;
+        const matchBarbero = !fBarbero || t.barbero_id == fBarbero;
+        const matchEstado = !fEstado || 
+                           (fEstado === 'pendiente' && !t.completado) || 
+                           (fEstado === 'completado' && t.completado);
+        return matchFecha && matchBarbero && matchEstado;
+    });
+
+    if (filtrados.length === 0) {
+        container.innerHTML = `
+            <div class="sin-turnos">
+                <i class="fas fa-calendar-times"></i>
+                <p>No hay turnos con esos filtros</p>
+                <p class="subtitulo">Intenta con otros criterios de búsqueda</p>
             </div>
         `;
-    
-        filtrados.forEach(t => {
-            const barbero = barberos.find(b => b.id == t.barbero_id);
-            const barberoNombre = barbero ? barbero.nombre : `ID: ${t.barbero_id}`;
-            
-            const serviciosTxt = Array.isArray(t.servicios) ? 
-                t.servicios.map(s => s.nombre).join(' + ') : 
-                'Ver detalle';
-                
-            const estadoClase = t.completado ? 'completado' : 'pendiente';
-            const estadoTexto = t.completado ? 'Completado' : 'Pendiente';
-                
-            html += `
-                <div class="fila ${t.completado ? 'completado' : ''}">
-                    <div class="columna" data-label="Cliente">
-                        <strong>${t.cliente}</strong><br>
-                        <small>${t.telefono}</small>
-                    </div>
-                    <div class="columna" data-label="Barbero">${barberoNombre}</div>
-                    <div class="columna" data-label="Servicios">${serviciosTxt}</div>
-                    <div class="columna" data-label="Precio">${(t.precio_total || 0).toLocaleString('es-PY')} Gs</div>
-                    <div class="columna" data-label="Fecha">${t.fecha}</div>
-                    <div class="columna" data-label="Hora">${t.hora} hs</div>
-                    <div class="columna" data-label="Estado">
-                        <span class="estado-turno ${estadoClase}">${estadoTexto}</span>
-                    </div>
-                    <div class="columna acciones" data-label="Acciones">
-                        ${!t.completado ? `
-                            <button class="btn-secundario" onclick="marcarCompletado(${t.id})">
-                                <i class="fas fa-check"></i> Cobrar
-                            </button>` : ''}
-                        <button class="btn-danger" onclick="eliminarTurno(${t.id})">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            `;
-        });
-    
-        container.innerHTML = html;
+        return;
     }
-    
-    window.marcarCompletado = async function(id) {
+
+    let html = `
+        <div class="fila encabezado">
+            <div class="columna">Cliente</div>
+            <div class="columna">Barbero</div>
+            <div class="columna">Servicios</div>
+            <div class="columna">Precio</div>
+            <div class="columna">Fecha</div>
+            <div class="columna">Hora</div>
+            <div class="columna">Estado</div>
+            <div class="columna">Acciones</div>
+        </div>
+    `;
+
+    filtrados.forEach(t => {
+        const barbero = barberos.find(b => b.id == t.barbero_id);
+        const barberoNombre = barbero ? barbero.nombre : `ID: ${t.barbero_id}`;
+        
+        const serviciosTxt = Array.isArray(t.servicios) ? 
+            t.servicios.map(s => s.nombre).join(' + ') : 
+            'Ver detalle';
+            
+        const estadoClase = t.completado ? 'completado' : 'pendiente';
+        const estadoTexto = t.completado ? 'Completado' : 'Pendiente';
+            
+        html += `
+            <div class="fila ${t.completado ? 'completado' : ''}">
+                <div class="columna" data-label="Cliente">
+                    <strong>${t.cliente}</strong><br>
+                    <small>${t.telefono}</small>
+                </div>
+                <div class="columna" data-label="Barbero">${barberoNombre}</div>
+                <div class="columna" data-label="Servicios">${serviciosTxt}</div>
+                <div class="columna" data-label="Precio">${(t.precio_total || 0).toLocaleString('es-PY')} Gs</div>
+                <div class="columna" data-label="Fecha">${formatearFechaAdmin(t.fecha)}</div>
+                <div class="columna" data-label="Hora">${t.hora} hs</div>
+                <div class="columna" data-label="Estado">
+                    <span class="estado-turno ${estadoClase}">${estadoTexto}</span>
+                </div>
+                <div class="columna acciones" data-label="Acciones">
+                    ${!t.completado ? `
+                        <button class="btn-secundario" onclick="marcarCompletado(${t.id})" style="padding: 6px 12px; margin-right: 5px;">
+                            <i class="fas fa-check"></i> Cobrar
+                        </button>` : ''}
+                    <button class="btn-danger" onclick="eliminarTurno(${t.id})" style="padding: 6px 12px;">
+                        <i class="fas fa-trash"></i> Eliminar
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
+
+async function marcarCompletado(id) {
+    try {
         const { error } = await _supabase
             .from('turnos')
             .update({ completado: true })
             .eq('id', id);
-    
+
         if (error) {
             console.error("Error al cobrar turno:", error);
             mostrarNotificacion("Error al actualizar el turno", "error");
         } else {
             mostrarNotificacion("¡Turno cobrado exitosamente!", "exito");
+            // Recargar turnos
+            await cargarTurnosAdmin();
         }
-    };
+    } catch (error) {
+        console.error("Error en marcarCompletado:", error);
+    }
+}
+
+// 10. ELIMINAR TURNO CON CONFIRMACIÓN DE PASSWORD (SEGURIDAD MEJORADA)
+async function eliminarTurno(id) {
+    // Primera confirmación básica
+    if (!confirm("¿Eliminar este registro permanentemente?")) {
+        return;
+    }
     
-    window.eliminarTurno = async function(id) {
-        if (!confirm("¿Eliminar este registro permanentemente?")) {
-            return;
+    // Confirmación adicional con password (seguridad extra)
+    const password = prompt("Ingrese la contraseña de administrador para confirmar eliminación:");
+    
+    if (password !== "admin123") {
+        if (password !== null) { // Solo mostrar error si no canceló
+            mostrarNotificacion("Contraseña incorrecta. Eliminación cancelada.", "error");
         }
-        
+        return;
+    }
+    
+    try {
         const { error } = await _supabase
             .from('turnos')
             .delete()
             .eq('id', id);
-    
+
         if (error) {
             console.error("Error al eliminar turno:", error);
-            mostrarNotificacion("Error al eliminar el turno", "error");
+            mostrarNotificacion("Error al eliminar el turno: " + error.message, "error");
         } else {
-            mostrarNotificacion("Registro eliminado", "error");
+            mostrarNotificacion("Turno eliminado exitosamente", "exito");
+            // Recargar turnos
+            await cargarTurnosAdmin();
+        }
+    } catch (error) {
+        console.error("Error en eliminarTurno:", error);
+        mostrarNotificacion("Error al eliminar turno", "error");
+    }
+}
+
+// 11. ESTADÍSTICAS
+function actualizarEstadisticas() {
+    const hoy = new Date();
+    const hoyFormateado = `${hoy.getDate().toString().padStart(2, '0')}/${(hoy.getMonth() + 1).toString().padStart(2, '0')}/${hoy.getFullYear()}`;
+    
+    const turnosHoy = turnosReservados.filter(t => formatearFechaAdmin(t.fecha) === hoyFormateado).length;
+    const pendientes = turnosReservados.filter(t => !t.completado).length;
+    const completados = turnosReservados.filter(t => t.completado).length;
+    const totalTurnos = turnosReservados.length;
+    const ingresosTotal = turnosReservados
+        .filter(t => t.completado)
+        .reduce((sum, t) => sum + (t.precio_total || 0), 0);
+
+    // Actualizar elementos
+    const elementos = {
+        'turnos-hoy': turnosHoy,
+        'turnos-pendientes': pendientes,
+        'turnos-completados': completados,
+        'total-turnos': totalTurnos,
+        'ingresos-totales': ingresosTotal.toLocaleString('es-PY') + ' Gs'
+    };
+
+    Object.entries(elementos).forEach(([id, valor]) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = valor;
+    });
+}
+
+// 12. FUNCIONES AUXILIARES
+function verificarAcceso() {
+    const auth = sessionStorage.getItem('admin-authenticated');
+    if (auth !== 'admin123') {
+        const pass = prompt("Contraseña de Administrador:");
+        if (pass === "admin123") {
+            sessionStorage.setItem('admin-authenticated', 'admin123');
+        } else {
+            window.location.href = 'index.html';
+        }
+    }
+}
+
+function configurarEventos() {
+    // Eventos de filtros de turnos
+    const filtros = ['filtro-fecha', 'filtro-barbero', 'filtro-estado'];
+    filtros.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            if (id === 'filtro-fecha') {
+                // Inicializar fecha actual en formato DD/MM/YYYY
+                const hoy = new Date();
+                const hoyFormateado = `${hoy.getDate().toString().padStart(2, '0')}/${(hoy.getMonth() + 1).toString().padStart(2, '0')}/${hoy.getFullYear()}`;
+                el.value = hoyFormateado;
+                el.placeholder = 'DD/MM/YYYY';
+                
+                // Event listener para validar formato
+                el.addEventListener('input', function(e) {
+                    const valor = e.target.value;
+                    // Validar formato básico DD/MM/YYYY
+                    if (valor === '' || valor.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+                        setTimeout(() => renderizarTablaFiltrada(), 300);
+                    }
+                });
+            } else {
+                el.addEventListener('change', renderizarTablaFiltrada);
+            }
+        }
+    });
+
+    // Botón limpiar filtros
+    if (document.getElementById('limpiar-filtros')) {
+        document.getElementById('limpiar-filtros').addEventListener('click', () => {
+            filtros.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    if (id === 'filtro-fecha') {
+                        const hoy = new Date();
+                        el.value = `${hoy.getDate().toString().padStart(2, '0')}/${(hoy.getMonth() + 1).toString().padStart(2, '0')}/${hoy.getFullYear()}`;
+                    } else {
+                        el.value = '';
+                    }
+                }
+            });
+            renderizarTablaFiltrada();
+        });
+    }
+    
+    // Evento para exportar datos
+    const btnExportar = document.getElementById('btn-exportar');
+    if (btnExportar) {
+        btnExportar.addEventListener('click', exportarDatos);
+    }
+}
+
+function mostrarNotificacion(texto, tipo) {
+    let notif = document.getElementById('notificacion-admin');
+    if (!notif) {
+        notif = document.createElement('div');
+        notif.id = 'notificacion-admin';
+        notif.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 10000;
+            display: none;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            max-width: 300px;
+        `;
+        document.body.appendChild(notif);
+    }
+    
+    notif.textContent = texto;
+    notif.className = `notificacion-admin notificacion-${tipo}`;
+    
+    // Estilos según tipo
+    if (tipo === 'exito') {
+        notif.style.background = 'linear-gradient(135deg, #4CAF50, #2E7D32)';
+    } else if (tipo === 'error') {
+        notif.style.background = 'linear-gradient(135deg, #f44336, #d32f2f)';
+    } else {
+        notif.style.background = 'linear-gradient(135deg, #2196F3, #1976D2)';
+    }
+    
+    notif.style.display = 'block';
+    
+    setTimeout(() => {
+        notif.style.display = 'none';
+    }, 3000);
+}
+
+function exportarDatos() {
+    // Crear datos para exportar
+    const datos = {
+        barberos: barberos.map(b => ({
+            ...b,
+            activo: b.activo ? 'Sí' : 'No'
+        })),
+        turnos: turnosReservados.map(t => ({
+            ...t,
+            fecha: formatearFechaAdmin(t.fecha),
+            completado: t.completado ? 'Sí' : 'No'
+        })),
+        estadisticas: {
+            fecha_exportacion: new Date().toLocaleString('es-PY'),
+            total_turnos: turnosReservados.length,
+            ingresos_totales: turnosReservados
+                .filter(t => t.completado)
+                .reduce((sum, t) => sum + (t.precio_total || 0), 0)
         }
     };
     
-    // 9. ESTADÍSTICAS
-    function actualizarEstadisticas() {
-        const hoy = new Date().toISOString().split('T')[0];
-        
-        const turnosHoy = turnosReservados.filter(t => t.fecha === hoy).length;
-        const pendientes = turnosReservados.filter(t => !t.completado).length;
-        const completados = turnosReservados.filter(t => t.completado).length;
-        const totalTurnos = turnosReservados.length;
-        const ingresosTotal = turnosReservados
-            .filter(t => t.completado)
-            .reduce((sum, t) => sum + (t.precio_total || 0), 0);
+    // Convertir a JSON
+    const datosJSON = JSON.stringify(datos, null, 2);
     
-        // Actualizar elementos
-        document.getElementById('turnos-hoy').textContent = turnosHoy;
-        document.getElementById('turnos-pendientes').textContent = pendientes;
-        document.getElementById('turnos-completados').textContent = completados;
-        document.getElementById('total-turnos').textContent = totalTurnos;
-        document.getElementById('ingresos-totales').textContent = ingresosTotal.toLocaleString('es-PY') + ' Gs';
-    }
+    // Crear blob y descargar
+    const blob = new Blob([datosJSON], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `barberia_elite_exportacion_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
     
-    // 10. FUNCIONES AUXILIARES
-    function verificarAcceso() {
-        const auth = sessionStorage.getItem('admin-authenticated');
-        if (auth !== 'admin123') {
-            const pass = prompt("Contraseña de Administrador:");
-            if (pass === "admin123") {
-                sessionStorage.setItem('admin-authenticated', 'admin123');
-            } else {
-                window.location.href = 'index.html';
-            }
-        }
-    }
-    
-    function configurarEventos() {
-        // Eventos de filtros de turnos
-        const filtros = ['filtro-fecha', 'filtro-barbero', 'filtro-estado'];
-        filtros.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.addEventListener('change', renderizarTablaFiltrada);
-        });
-    
-        if (document.getElementById('limpiar-filtros')) {
-            document.getElementById('limpiar-filtros').addEventListener('click', () => {
-                filtros.forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) el.value = '';
-                });
-                renderizarTablaFiltrada();
-            });
-        }
-        
-        // Evento para exportar datos
-        const btnExportar = document.getElementById('btn-exportar');
-        if (btnExportar) {
-            btnExportar.addEventListener('click', exportarDatos);
-        }
-    }
-    
-    function configurarSuscripcionesRealtime() {
-        // Suscripción para turnos
-        _supabase
-            .channel('admin-updates')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'turnos' }, () => {
-                console.log("Cambio detectado en turnos, recargando...");
-                cargarTurnosAdmin();
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'barberos' }, () => {
-                console.log("Cambio detectado en barberos, recargando...");
-                cargarBarberosDesdeSupabase();
-            })
-            .subscribe();
-    }
-    
-    function mostrarNotificacion(texto, tipo) {
-        let notif = document.getElementById('notificacion-admin');
-        if (!notif) {
-            notif = document.createElement('div');
-            notif.id = 'notificacion-admin';
-            document.body.appendChild(notif);
-        }
-        
-        notif.textContent = texto;
-        notif.className = `notificacion-admin notificacion-${tipo}`;
-        notif.style.display = 'block';
-        
-        setTimeout(() => {
-            notif.style.display = 'none';
-        }, 3000);
-    }
-    
-    function exportarDatos() {
-        // Crear datos para exportar
-        const datos = {
-            barberos: barberos,
-            turnos: turnosReservados,
-            estadisticas: {
-                fecha: new Date().toLocaleString('es-PY'),
-                totalTurnos: turnosReservados.length,
-                ingresosTotales: turnosReservados
-                    .filter(t => t.completado)
-                    .reduce((sum, t) => sum + (t.precio_total || 0), 0)
-            }
-        };
-        
-        // Convertir a JSON
-        const datosJSON = JSON.stringify(datos, null, 2);
-        
-        // Crear blob y descargar
-        const blob = new Blob([datosJSON], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `barberia_elite_datos_${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        mostrarNotificacion('Datos exportados exitosamente', 'exito');
-    }
-    
-    
-    console.log("admin.js cargado correctamente con gestión de barberos");
+    mostrarNotificacion('Datos exportados exitosamente', 'exito');
 }
+
+// 13. Hacer funciones disponibles globalmente
+window.mostrarModalNuevoBarbero = mostrarModalNuevoBarbero;
+window.cerrarModalBarbero = cerrarModalBarbero;
+window.guardarBarbero = guardarBarbero;
+window.toggleActivoBarbero = toggleActivoBarbero;
+window.editarBarbero = editarBarbero;
+window.eliminarBarbero = eliminarBarbero;
+window.marcarCompletado = marcarCompletado;
+window.eliminarTurno = eliminarTurno;
+
+console.log("admin.js cargado correctamente con todas las mejoras");

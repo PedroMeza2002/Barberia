@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Denis Barber Shop - Reserva de Turnos</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <!-- Menú móvil -->
+    <div class="menu-mobile-toggle">
+        <i class="fas fa-bars"></i>
+    </div>
+
+    <header>
+        <div class="container">
+            <div class="logo">
+                <i class="fas fa-cut"></i>
+                <h1>Denis Barber Shop</h1>
+            </div>
+            <nav class="nav-desktop">
+                <ul>
+                    <li><a href="index.html">Inicio</a></li> <!-- Cambiado: Enlace a la nueva página de inicio -->
+                    <li><a href="reservar.html" class="active">Reservar Turno</a></li> <!-- Cambiado: active aquí -->
+                    <li><a href="admin.html" id="admin-link">Panel Admin</a></li>
+                </ul>
+            </nav>
+            <nav class="nav-mobile">
+                <ul>
+                    <li><a href="index.html">Inicio</a></li> <!-- Cambiado -->
+                    <li><a href="reservar.html" class="active">Reservar Turno</a></li> <!-- Cambiado -->
+                    <li><a href="admin.html" id="admin-link-mobile">Panel Admin</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="hero">
+            <h2>Reserva tu turno con nuestros barberos</h2>
+            <p>Selecciona un barbero disponible y elige el horario que prefieras</p>
+        </section>
+
+        <!-- Estado de barberos - Actualizado en tiempo real -->
+        <section class="barberos-section">
+            <h2>Nuestros Barberos <span id="contador-disponibles" class="contador-badge"></span></h2>
+            <div class="barberos-grid" id="barberos-container">
+                <!-- Barberos cargados dinámicamente desde Supabase -->
+            </div>
+        </section>
+        <!-- Calendario de disponibilidad -->
+        <section class="calendario-section">
+            <h2>Calendario de Disponibilidad</h2>
+            <div class="calendario-container">
+                <div class="calendario-header">
+                    <button id="prev-month" class="btn-calendario">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <h3 id="mes-actual">Enero 2024</h3>
+                    <button id="next-month" class="btn-calendario">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+
+                <div class="calendario-dias-semana">
+                    <div class="dia-semana">Lun</div>
+                    <div class="dia-semana">Mar</div>
+                    <div class="dia-semana">Mié</div>
+                    <div class="dia-semana">Jue</div>
+                    <div class="dia-semana">Vie</div>
+                    <div class="dia-semana">Sáb</div>
+                    <div class="dia-semana">Dom</div>
+                </div>
+
+                <div class="calendario-dias" id="calendario-dias">
+                    <!-- Días cargados dinámicamente -->
+                </div>
+
+                <div class="calendario-leyenda">
+                    <div class="leyenda-item">
+                        <span class="leyenda-color disponible"></span>
+                        <span>Disponible</span>
+                    </div>
+                    <div class="leyenda-item">
+                        <span class="leyenda-color reservado"></span>
+                        <span>Reservado</span>
+                    </div>
+                    <div class="leyenda-item">
+                        <span class="leyenda-color hoy"></span>
+                        <span>Hoy</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Formulario de reserva -->
+        <section class="reserva-section">
+            <h2>Reservar Turno</h2>
+            <div class="reserva-form">
+                <!-- Información del teléfono guardado -->
+                <div id="info-telefono" class="info-telefono">
+                    <p><i class="fas fa-info-circle"></i> Viendo turnos del teléfono: <strong
+                            id="telefono-actual"></strong></p>
+                    <button id="cambiar-telefono" class="btn-small">
+                        <i class="fas fa-sync-alt"></i> Cambiar teléfono
+                    </button>
+                </div>
+
+                <div class="form-group">
+                    <label for="nombre">Nombre completo:</label>
+                    <input type="text" id="nombre" placeholder="Ingresa tu nombre" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="telefono">Teléfono:</label>
+                    <div class="telefono-container">
+                        <input type="tel" id="telefono" placeholder="Ingresa tu teléfono" required>
+                        <button type="button" id="buscar-turnos-btn" class="btn-secondary btn-small">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                    </div>
+                    <small class="texto-ayuda">El teléfono se guarda automáticamente para futuras visitas</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="barbero">Selecciona barbero:</label>
+                    <select id="barbero" required>
+                        <option value="">Selecciona un barbero</option>
+                        <!-- Opciones cargadas dinámicamente -->
+                    </select>
+                    <small class="texto-ayuda">Solo se muestran barberos disponibles</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Selecciona servicios (puedes elegir varios):</label>
+                    <div class="servicios-checkbox-container" id="servicios-container">
+                        <!-- Checkboxes cargados dinámicamente -->
+                    </div>
+                    <div id="total-precio" class="total-precio"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="fecha">Selecciona fecha:</label>
+                    <input type="date" id="fecha" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="hora">Selecciona hora:</label>
+                    <select id="hora" required>
+                        <option value="">Selecciona una hora</option>
+                        <!-- Horarios cargados dinámicamente -->
+                    </select>
+                </div>
+
+                <button id="reservar-btn" class="btn-primary">
+                    <i class="fas fa-calendar-check"></i> Reservar Turno
+                </button>
+                <p id="mensaje-reserva" class="mensaje"></p>
+            </div>
+        </section>
+
+        <!-- Turnos reservados por el usuario -->
+        <section class="turnos-reservados">
+            <h2 id="titulo-turnos">Tus Turnos Reservados</h2>
+            <div class="turnos-container" id="turnos-container">
+                <!-- Turnos cargados dinámicamente desde Supabase -->
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p><i class="fas fa-clock"></i> Horario: Martes a Sábado 8:00 - 11:30 / 13:00 - 19:00</p>
+            <p><i class="fas fa-phone"></i> Teléfono: 555-1234</p>
+            <p>&copy; 2024 Denis Barber Shop. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>

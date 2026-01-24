@@ -1,20 +1,18 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Denis Barber Shop - Inicio</title>
+    <title>Barbería Elite - Corte y Estilo Profesional</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         /* Estilos específicos para la página de presentación */
         .presentacion-hero {
             min-height: 100vh;
-            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)),
-                url('https://images.unsplash.com/photo-1585747860715-2ba37e788b70?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), 
+                        url('https://images.unsplash.com/photo-1585747860715-2ba37e788b70?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
             background-size: cover;
             background-position: center;
             display: flex;
@@ -24,104 +22,85 @@
             color: white;
             padding: 20px;
         }
-
+        
         .hero-content {
             max-width: 800px;
             animation: fadeInUp 1s ease-out;
         }
-
+        
         .logo-presentacion {
-            max-width: 300px; /* Aumentado para mejor visualización del logo */
+            max-width: 200px;
             margin: 0 auto 30px;
         }
-
+        
         .logo-presentacion img {
             width: 100%;
             height: auto;
             filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.3));
-            border-radius: 10px; /* Opcional: suaviza bordes si el logo es cuadrado */
         }
-
-        /* Si no tienes logo, puedes usar esta clase para un placeholder */
-        .logo-placeholder {
-            width: 200px;
-            height: 200px;
-            background: rgba(212, 175, 55, 0.1);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 30px;
-            border: 3px solid #d4af37;
-        }
-
-        .logo-placeholder i {
-            font-size: 80px;
-            color: #d4af37;
-        }
-
+        
         .hero-title {
             font-size: 3.5em;
             margin-bottom: 20px;
             font-weight: 800;
             text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.5);
         }
-
+        
         .hero-subtitle {
             font-size: 1.3em;
             margin-bottom: 30px;
             line-height: 1.6;
             opacity: 0.9;
         }
-
+        
         .hero-btn {
             display: inline-block;
-            background: #d4af37;
-            color: #1a1a1a;
+            background: #007bff;
+            color: white;
             padding: 18px 45px;
             font-size: 1.2em;
             font-weight: 600;
             border-radius: 50px;
             text-decoration: none;
             transition: all 0.3s ease;
-            border: 2px solid #d4af37;
+            border: 2px solid #007bff;
             text-transform: uppercase;
             letter-spacing: 1px;
             margin-top: 20px;
-            box-shadow: 0 8px 25px rgba(212, 175, 55, 0.3);
+            box-shadow: 0 8px 25px rgba(0, 123, 255, 0.3);
         }
-
+        
         .hero-btn:hover {
             background: transparent;
-            color: #d4af37;
+            color: white;
             transform: translateY(-5px);
-            box-shadow: 0 12px 30px rgba(212, 175, 55, 0.4);
+            box-shadow: 0 12px 30px rgba(0, 123, 255, 0.4);
         }
-
+        
         .hero-btn i {
             margin-left: 10px;
             transition: transform 0.3s ease;
         }
-
+        
         .hero-btn:hover i {
             transform: translateX(5px);
         }
-
+        
         .presentacion-features {
             padding: 100px 20px;
             background: #f8f9fa;
         }
-
+        
         .features-container {
             max-width: 1200px;
             margin: 0 auto;
         }
-
+        
         .section-title {
             text-align: center;
             margin-bottom: 60px;
         }
-
+        
         .section-title h2 {
             font-size: 2.5em;
             color: #2c3e50;
@@ -129,26 +108,26 @@
             position: relative;
             display: inline-block;
         }
-
+        
         .section-title h2:after {
             content: '';
             position: absolute;
             width: 70px;
             height: 4px;
-            background: #d4af37;
+            background: #007bff;
             bottom: -10px;
             left: 50%;
             transform: translateX(-50%);
             border-radius: 2px;
         }
-
+        
         .features-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 40px;
             margin-top: 50px;
         }
-
+        
         .feature-card {
             background: white;
             padding: 40px 30px;
@@ -157,51 +136,51 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
-
+        
         .feature-card:hover {
             transform: translateY(-10px);
             box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
         }
-
+        
         .feature-icon {
             width: 80px;
             height: 80px;
-            background: #fef7e6;
+            background: #e8f4fd;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto 25px;
         }
-
+        
         .feature-icon i {
             font-size: 2em;
-            color: #d4af37;
+            color: #007bff;
         }
-
+        
         .feature-card h3 {
             font-size: 1.5em;
             color: #2c3e50;
             margin-bottom: 15px;
         }
-
+        
         .feature-card p {
             color: #666;
             line-height: 1.6;
         }
-
+        
         .presentacion-services {
             padding: 100px 20px;
             background: white;
         }
-
+        
         .services-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 30px;
             margin-top: 50px;
         }
-
+        
         .service-item {
             text-align: center;
             padding: 25px;
@@ -209,341 +188,155 @@
             background: #f8f9fa;
             transition: all 0.3s ease;
         }
-
+        
         .service-item:hover {
-            background: #fef7e6;
+            background: #e8f4fd;
             transform: scale(1.05);
         }
-
+        
         .service-icon {
             font-size: 2.5em;
-            color: #d4af37;
+            color: #007bff;
             margin-bottom: 15px;
         }
-
+        
         .service-item h4 {
             font-size: 1.3em;
             color: #2c3e50;
             margin-bottom: 10px;
         }
-
+        
         .service-price {
             font-size: 1.2em;
             font-weight: 600;
             color: #28a745;
         }
-
+        
         .presentacion-cta {
             padding: 100px 20px;
-            background: linear-gradient(135deg, #2c3e50 0%, #1a1a1a 100%);
+            background: linear-gradient(135deg, #2c3e50 0%, #007bff 100%);
             color: white;
             text-align: center;
         }
-
+        
         .cta-container {
             max-width: 800px;
             margin: 0 auto;
         }
-
+        
         .cta-title {
             font-size: 2.8em;
             margin-bottom: 20px;
         }
-
+        
         .cta-text {
             font-size: 1.2em;
             margin-bottom: 40px;
             opacity: 0.9;
         }
-
+        
         .cta-buttons {
             display: flex;
             gap: 20px;
             justify-content: center;
             flex-wrap: wrap;
         }
-
+        
         .btn-outline-light {
             background: transparent;
-            border: 2px solid #d4af37;
-            color: #d4af37;
+            border: 2px solid white;
+            color: white;
             padding: 15px 35px;
             border-radius: 50px;
             text-decoration: none;
             font-weight: 600;
             transition: all 0.3s ease;
         }
-
+        
         .btn-outline-light:hover {
-            background: #d4af37;
-            color: #1a1a1a;
+            background: white;
+            color: #007bff;
         }
-
-        /* Footer específico para esta página */
-        .presentacion-footer {
-            background: #1a1a1a;
-            color: white;
-            padding: 60px 20px 30px;
-        }
-
-        .footer-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 40px;
-            margin-bottom: 40px;
-        }
-
-        .footer-logo {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            font-size: 1.5em;
-            color: #d4af37;
-        }
-
-        .footer-logo-img {
-            max-width: 50px;
-            height: auto;
-        }
-
-        .footer-info p {
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            color: #ccc;
-        }
-
-        .footer-info i {
-            color: #d4af37;
-            width: 20px;
-        }
-
-        .footer-social {
-            display: flex;
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        .footer-social a {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
-            background: rgba(212, 175, 55, 0.1);
-            border-radius: 50%;
-            color: #d4af37;
-            font-size: 1.2em;
-            transition: all 0.3s ease;
-        }
-
-        .footer-social a:hover {
-            background: #d4af37;
-            color: #1a1a1a;
-            transform: translateY(-3px);
-        }
-
-        .footer-bottom {
-            text-align: center;
-            padding-top: 30px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            color: #888;
-            font-size: 0.9em;
-        }
-
-        .footer-bottom i.fa-heart {
-            color: #e74c3c;
-        }
-
+        
         /* Animaciones */
         @keyframes fadeInUp {
             from {
                 opacity: 0;
                 transform: translateY(30px);
             }
-
             to {
                 opacity: 1;
                 transform: translateY(0);
             }
         }
-
-        /* Header específico para esta página */
-        .presentacion-header {
-            position: fixed;
-            top: 0;
-            width: 100%;
-            background: rgba(26, 26, 26, 0.95);
-            backdrop-filter: blur(10px);
-            z-index: 1000;
-            padding: 1rem 0;
-        }
-
-        .presentacion-header .container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .presentacion-nav {
-            display: flex;
-            gap: 30px;
-        }
-
-        .presentacion-nav a {
-            color: white;
-            text-decoration: none;
-            font-weight: 500;
-            transition: color 0.3s ease;
-            padding: 8px 15px;
-            border-radius: 5px;
-        }
-
-        .presentacion-nav a:hover {
-            color: #d4af37;
-            background: rgba(212, 175, 55, 0.1);
-        }
-
-        .presentacion-nav a.active {
-            color: #d4af37;
-            background: rgba(212, 175, 55, 0.1);
-        }
-
+        
         /* Responsive */
         @media (max-width: 768px) {
             .hero-title {
                 font-size: 2.5em;
             }
-
+            
             .hero-subtitle {
                 font-size: 1.1em;
             }
-
+            
             .hero-btn {
                 padding: 15px 35px;
                 font-size: 1.1em;
             }
-
+            
             .section-title h2 {
                 font-size: 2em;
             }
-
+            
             .features-grid {
                 grid-template-columns: 1fr;
             }
-
+            
             .cta-title {
                 font-size: 2em;
             }
-
+            
             .cta-buttons {
                 flex-direction: column;
                 align-items: center;
             }
-
+            
             .btn-outline-light {
                 width: 100%;
                 max-width: 300px;
                 text-align: center;
             }
-
-            .presentacion-nav {
-                display: none;
-                position: absolute;
-                top: 100%;
-                left: 0;
-                right: 0;
-                background: rgba(26, 26, 26, 0.98);
-                flex-direction: column;
-                padding: 20px;
-                gap: 15px;
-            }
-
-            .presentacion-nav.active {
-                display: flex;
-            }
-
-            .menu-toggle {
-                display: block;
-                background: none;
-                border: none;
-                color: white;
-                font-size: 1.5em;
-                cursor: pointer;
-            }
-
-            .logo-presentacion {
-                max-width: 250px;
-            }
         }
-
+        
         @media (max-width: 480px) {
             .hero-title {
                 font-size: 2em;
             }
-
+            
             .hero-btn {
                 padding: 12px 30px;
                 font-size: 1em;
             }
-
-            .logo-presentacion {
-                max-width: 200px;
-            }
-        }
-
-        /* Ajuste para el contenido hero */
-        .presentacion-hero {
-            padding-top: 80px;
         }
     </style>
 </head>
-
 <body>
-    <!-- Header -->
-    <header class="presentacion-header">
-        <div class="container">
-            <div class="logo">
-                <!-- Aquí también puedes poner tu logo en el header -->
-                <img src="logo.jpeg" alt="Denis Barber Shop Logo" class="footer-logo-img" style="max-width: 40px;">
-                <h1>Denis Barber Shop</h1>
-            </div>
-            <nav class="presentacion-nav">
-                <a href="index.html" class="active">Inicio</a>
-                <a href="reservar.html">Reservar Turno</a>
-                <a href="admin.html">Panel Admin</a>
-            </nav>
-            <button class="menu-toggle">
-                <i class="fas fa-bars"></i>
-            </button>
-        </div>
-    </header>
-
     <!-- Hero Section -->
     <section class="presentacion-hero">
         <div class="hero-content">
-            <!-- OPCIÓN 1: Si tienes una imagen de logo -->
+            <!-- Aquí reemplaza "logo.png" con el nombre de tu archivo de logo -->
             <div class="logo-presentacion">
-                <img src="logo.jpeg" alt="Denis Barber Shop Logo">
+                <img src="logo.png" alt="Barbería Elite Logo">
             </div>
             
-            <!-- OPCIÓN 2: Si NO tienes logo y quieres usar placeholder -->
-            <!-- 
-            <div class="logo-placeholder">
-                <i class="fas fa-cut"></i>
-            </div>
-            -->
-
-            <h1 class="hero-title">DENIS BARBER SHOP</h1>
+            <h1 class="hero-title">BARBERÍA ELITE</h1>
             <p class="hero-subtitle">
-                Más que un corte, una experiencia. Donde el estilo se encuentra con la tradición.
-                Nuestros barberos expertos te ofrecen el mejor servicio con atención personalizada
+                Más que un corte, una experiencia. Donde el estilo se encuentra con la tradición. 
+                Nuestros barberos expertos te ofrecen el mejor servicio con atención personalizada 
                 y técnicas modernas para que luzcas impecable.
             </p>
-            <a href="reservar.html" class="hero-btn">
+            <a href="index.html" class="hero-btn">
                 Reservar Turno Ahora <i class="fas fa-arrow-right"></i>
             </a>
         </div>
@@ -556,33 +349,30 @@
                 <h2>¿Por Qué Elegirnos?</h2>
                 <p>Descubre lo que nos hace diferentes</p>
             </div>
-
+            
             <div class="features-grid">
                 <div class="feature-card">
                     <div class="feature-icon">
                         <i class="fas fa-user-tie"></i>
                     </div>
                     <h3>Barberos Expertos</h3>
-                    <p>Nuestro equipo está compuesto por profesionales certificados con años de experiencia en las
-                        últimas tendencias de corte y estilo.</p>
+                    <p>Nuestro equipo está compuesto por profesionales certificados con años de experiencia en las últimas tendencias de corte y estilo.</p>
                 </div>
-
+                
                 <div class="feature-card">
                     <div class="feature-icon">
                         <i class="fas fa-clock"></i>
                     </div>
                     <h3>Reserva Online</h3>
-                    <p>Reserva tu turno en segundos desde nuestro sistema online. Elige tu barbero, fecha y horario
-                        preferido sin complicaciones.</p>
+                    <p>Reserva tu turno en segundos desde nuestro sistema online. Elige tu barbero, fecha y horario preferido sin complicaciones.</p>
                 </div>
-
+                
                 <div class="feature-card">
                     <div class="feature-icon">
                         <i class="fas fa-star"></i>
                     </div>
                     <h3>Calidad Premium</h3>
-                    <p>Utilizamos productos de primera calidad y equipos profesionales para garantizar los mejores
-                        resultados en cada servicio.</p>
+                    <p>Utilizamos productos de primera calidad y equipos profesionales para garantizar los mejores resultados en cada servicio.</p>
                 </div>
             </div>
         </div>
@@ -595,7 +385,7 @@
                 <h2>Nuestros Servicios</h2>
                 <p>Todo lo que necesitas para lucir perfecto</p>
             </div>
-
+            
             <div class="services-grid">
                 <div class="service-item">
                     <div class="service-icon">
@@ -605,7 +395,7 @@
                     <p class="service-price">30.000 Gs</p>
                     <p>Corte tradicional con acabado profesional</p>
                 </div>
-
+                
                 <div class="service-item">
                     <div class="service-icon">
                         <i class="fas fa-paint-brush"></i>
@@ -614,7 +404,7 @@
                     <p class="service-price">40.000 Gs</p>
                     <p>Corte con degradado y sombreado perfecto</p>
                 </div>
-
+                
                 <div class="service-item">
                     <div class="service-icon">
                         <i class="fas fa-user"></i>
@@ -623,7 +413,7 @@
                     <p class="service-price">10.000 Gs</p>
                     <p>Arreglo de barba con máquina profesional</p>
                 </div>
-
+                
                 <div class="service-item">
                     <div class="service-icon">
                         <i class="fas fa-fire"></i>
@@ -632,7 +422,7 @@
                     <p class="service-price">15.000 Gs</p>
                     <p>Arreglo con navaja tradicional caliente</p>
                 </div>
-
+                
                 <div class="service-item">
                     <div class="service-icon">
                         <i class="fas fa-eye"></i>
@@ -650,11 +440,11 @@
         <div class="cta-container">
             <h2 class="cta-title">¿Listo para tu Próximo Corte?</h2>
             <p class="cta-text">
-                No esperes más para lucir tu mejor versión. Reserva ahora y experimenta
+                No esperes más para lucir tu mejor versión. Reserva ahora y experimenta 
                 la diferencia de un servicio de barbería de primera clase.
             </p>
             <div class="cta-buttons">
-                <a href="reservar.html" class="hero-btn">
+                <a href="index.html" class="hero-btn">
                     <i class="fas fa-calendar-check"></i> Reservar Ahora
                 </a>
                 <a href="#contacto" class="btn-outline-light">
@@ -665,18 +455,18 @@
     </section>
 
     <!-- Footer -->
-    <footer id="contacto" class="presentacion-footer">
+    <footer id="contacto">
         <div class="container">
             <div class="footer-content">
                 <div class="footer-logo">
-                    <img src="logo.jpeg" alt="Denis Barber Shop Logo" class="footer-logo-img">
-                    <h3>Denis Barber Shop</h3>
+                    <i class="fas fa-cut"></i>
+                    <h3>Barbería Elite</h3>
                 </div>
                 <div class="footer-info">
                     <p><i class="fas fa-map-marker-alt"></i> Av. Principal 123, Ciudad</p>
                     <p><i class="fas fa-phone"></i> (098) 123-4567</p>
                     <p><i class="fas fa-clock"></i> Martes a Sábado: 8:00 - 19:00</p>
-                    <p><i class="fas fa-envelope"></i> info@denisbarber.com</p>
+                    <p><i class="fas fa-envelope"></i> info@barberiaelite.com</p>
                 </div>
                 <div class="footer-social">
                     <a href="#"><i class="fab fa-facebook"></i></a>
@@ -685,8 +475,8 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2024 Denis Barber Shop. Todos los derechos reservados.</p>
-                <p>Creado con <i class="fas fa-heart"></i> para amantes del buen estilo</p>
+                <p>&copy; 2024 Barbería Elite. Todos los derechos reservados.</p>
+                <p>Creado con <i class="fas fa-heart" style="color: #e74c3c;"></i> para amantes del buen estilo</p>
             </div>
         </div>
     </footer>
@@ -697,9 +487,9 @@
             anchor.addEventListener('click', function (e) {
                 e.preventDefault();
                 const targetId = this.getAttribute('href');
-                if (targetId !== '#') {
+                if(targetId !== '#') {
                     const targetElement = document.querySelector(targetId);
-                    if (targetElement) {
+                    if(targetElement) {
                         window.scrollTo({
                             top: targetElement.offsetTop - 80,
                             behavior: 'smooth'
@@ -708,22 +498,22 @@
                 }
             });
         });
-
+        
         // Efecto de aparición al hacer scroll
         const observerOptions = {
             threshold: 0.1,
             rootMargin: '0px 0px -50px 0px'
         };
-
+        
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
-                if (entry.isIntersecting) {
+                if(entry.isIntersecting) {
                     entry.target.style.opacity = '1';
                     entry.target.style.transform = 'translateY(0)';
                 }
             });
         }, observerOptions);
-
+        
         // Aplicar animación a las tarjetas
         document.querySelectorAll('.feature-card, .service-item').forEach(card => {
             card.style.opacity = '0';
@@ -731,30 +521,6 @@
             card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
             observer.observe(card);
         });
-
-        // Menú móvil
-        document.querySelector('.menu-toggle').addEventListener('click', function () {
-            const nav = document.querySelector('.presentacion-nav');
-            nav.classList.toggle('active');
-        });
-
-        // Cerrar menú al hacer click en un enlace
-        document.querySelectorAll('.presentacion-nav a').forEach(link => {
-            link.addEventListener('click', function () {
-                const nav = document.querySelector('.presentacion-nav');
-                nav.classList.remove('active');
-            });
-        });
-
-        // Cerrar menú al hacer click fuera
-        document.addEventListener('click', function (event) {
-            const nav = document.querySelector('.presentacion-nav');
-            const toggle = document.querySelector('.menu-toggle');
-            if (!nav.contains(event.target) && !toggle.contains(event.target)) {
-                nav.classList.remove('active');
-            }
-        });
     </script>
 </body>
-
 </html>

@@ -1190,3 +1190,346 @@ footer i {
     }
 }
 
+/* Estilos para la información del teléfono */
+.info-telefono {
+    display: none;
+    margin-bottom: 20px;
+    padding: 12px 15px;
+    background: #e8f4fd;
+    border-radius: 8px;
+    border-left: 4px solid #007bff;
+    font-size: 0.9em;
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.info-telefono p {
+    margin: 0 0 8px 0;
+    color: #333;
+}
+
+.info-telefono i {
+    color: #007bff;
+    margin-right: 8px;
+}
+
+#telefono-actual {
+    color: #0056b3;
+    font-weight: 600;
+}
+
+/* Contenedor para el campo de teléfono con botón */
+.telefono-container {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.telefono-container input {
+    flex: 1;
+}
+
+/* Botón pequeño */
+.btn-small {
+    padding: 8px 12px;
+    font-size: 0.85em;
+    height: auto;
+    white-space: nowrap;
+}
+
+/* Botón secundario */
+.btn-secondary {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+    border-color: #545b62;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .telefono-container {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .telefono-container input,
+    .telefono-container button {
+        width: 100%;
+    }
+    
+    .btn-small {
+        padding: 10px;
+        font-size: 0.9em;
+    }
+    
+    .info-telefono {
+        padding: 10px;
+        font-size: 0.85em;
+    }
+}
+/* Estilos para turnos pasados */
+.turno-pasado {
+    opacity: 0.7;
+    border-left: 4px solid #6c757d !important;
+    background-color: #f8f9fa;
+}
+
+.turno-pasado .turno-cliente {
+    color: #6c757d;
+}
+
+.turno-pasado .turno-detalle {
+    color: #868e96;
+}
+
+.turno-pasado-badge {
+    display: inline-block;
+    background-color: #6c757d;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    margin-bottom: 8px;
+}
+
+.turno-pasado-badge i {
+    margin-right: 5px;
+}
+
+/* Botón deshabilitado para turnos pasados */
+.btn-danger:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: #6c757d;
+    border-color: #6c757d;
+}
+/* ============================================
+   ESTILOS DE CALENDARIO
+   ============================================ */
+
+.calendario-section {
+    margin: 40px 0;
+    padding: 25px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.calendario-section h2 {
+    margin-bottom: 20px;
+    color: #2c3e50;
+    font-size: 1.8em;
+}
+
+.calendario-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.calendario-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 0 10px;
+}
+
+.calendario-header h3 {
+    margin: 0;
+    font-size: 1.4em;
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.btn-calendario {
+    background: #007bff;
+    color: white;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.btn-calendario:hover {
+    background: #0056b3;
+    transform: scale(1.1);
+}
+
+.btn-calendario i {
+    font-size: 1.2em;
+}
+
+.calendario-dias-semana {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.dia-semana {
+    font-weight: 600;
+    color: #495057;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+.calendario-dias {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+}
+
+.dia-calendario {
+    aspect-ratio: 1;
+    padding: 10px;
+    border-radius: 8px;
+    background: white;
+    border: 2px solid #e9ecef;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.dia-calendario:hover:not(.dia-vacio):not(.dia-pasado) {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.dia-numero {
+    font-size: 1.2em;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.dia-estado {
+    font-size: 0.7em;
+    padding: 2px 6px;
+    border-radius: 10px;
+    white-space: nowrap;
+}
+
+/* Estados del día */
+.dia-disponible {
+    background: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724;
+}
+
+.dia-reservado {
+    background: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+
+.dia-hoy {
+    background: #cce5ff;
+    border-color: #007bff;
+    color: #004085;
+    border-width: 3px;
+}
+
+.dia-pasado {
+    background: #f8f9fa;
+    border-color: #dee2e6;
+    color: #6c757d;
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.dia-vacio {
+    background: transparent;
+    border-color: transparent;
+    cursor: default;
+}
+
+/* Leyenda */
+.calendario-leyenda {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid #e9ecef;
+}
+
+.leyenda-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9em;
+    color: #495057;
+}
+
+.leyenda-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 2px solid currentColor;
+}
+
+.leyenda-color.disponible {
+    background: #d4edda;
+    border-color: #c3e6cb;
+}
+
+.leyenda-color.reservado {
+    background: #f8d7da;
+    border-color: #f5c6cb;
+}
+
+.leyenda-color.hoy {
+    background: #cce5ff;
+    border-color: #007bff;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .calendario-section {
+        padding: 15px;
+        margin: 25px 0;
+    }
+    
+    .calendario-dias-semana,
+    .calendario-dias {
+        gap: 4px;
+    }
+    
+    .dia-calendario {
+        padding: 5px;
+    }
+    
+    .dia-numero {
+        font-size: 1em;
+    }
+    
+    .dia-estado {
+        font-size: 0.6em;
+        padding: 1px 4px;
+    }
+    
+    .calendario-leyenda {
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+    }
+}
