@@ -20,20 +20,21 @@
     <header>
         <div class="container">
             <div class="logo">
-                <i class="fas fa-cut"></i>
+                <!-- Cambiado: Icono de tijera por logo -->
+                <img src="logo.png" alt="Denis Barber Shop Logo" class="logo-img">
                 <h1>Denis Barber Shop</h1>
             </div>
             <nav class="nav-desktop">
                 <ul>
-                    <li><a href="index.html">Inicio</a></li> <!-- Cambiado: Enlace a la nueva página de inicio -->
-                    <li><a href="reservar.html" class="active">Reservar Turno</a></li> <!-- Cambiado: active aquí -->
+                    <li><a href="index.html">Inicio</a></li>
+                    <li><a href="reservar.html" class="active">Reservar Turno</a></li>
                     <li><a href="admin.html" id="admin-link">Panel Admin</a></li>
                 </ul>
             </nav>
             <nav class="nav-mobile">
                 <ul>
-                    <li><a href="index.html">Inicio</a></li> <!-- Cambiado -->
-                    <li><a href="reservar.html" class="active">Reservar Turno</a></li> <!-- Cambiado -->
+                    <li><a href="index.html">Inicio</a></li>
+                    <li><a href="reservar.html" class="active">Reservar Turno</a></li>
                     <li><a href="admin.html" id="admin-link-mobile">Panel Admin</a></li>
                 </ul>
             </nav>
@@ -53,51 +54,6 @@
                 <!-- Barberos cargados dinámicamente desde Supabase -->
             </div>
         </section>
-        <!-- Calendario de disponibilidad -->
-        <section class="calendario-section">
-            <h2>Calendario de Disponibilidad</h2>
-            <div class="calendario-container">
-                <div class="calendario-header">
-                    <button id="prev-month" class="btn-calendario">
-                        <i class="fas fa-chevron-left"></i>
-                    </button>
-                    <h3 id="mes-actual">Enero 2024</h3>
-                    <button id="next-month" class="btn-calendario">
-                        <i class="fas fa-chevron-right"></i>
-                    </button>
-                </div>
-
-                <div class="calendario-dias-semana">
-                    <div class="dia-semana">Lun</div>
-                    <div class="dia-semana">Mar</div>
-                    <div class="dia-semana">Mié</div>
-                    <div class="dia-semana">Jue</div>
-                    <div class="dia-semana">Vie</div>
-                    <div class="dia-semana">Sáb</div>
-                    <div class="dia-semana">Dom</div>
-                </div>
-
-                <div class="calendario-dias" id="calendario-dias">
-                    <!-- Días cargados dinámicamente -->
-                </div>
-
-                <div class="calendario-leyenda">
-                    <div class="leyenda-item">
-                        <span class="leyenda-color disponible"></span>
-                        <span>Disponible</span>
-                    </div>
-                    <div class="leyenda-item">
-                        <span class="leyenda-color reservado"></span>
-                        <span>Reservado</span>
-                    </div>
-                    <div class="leyenda-item">
-                        <span class="leyenda-color hoy"></span>
-                        <span>Hoy</span>
-                    </div>
-                </div>
-            </div>
-        </section>
-
         <!-- Formulario de reserva -->
         <section class="reserva-section">
             <h2>Reservar Turno</h2>
@@ -163,6 +119,36 @@
                 <p id="mensaje-reserva" class="mensaje"></p>
             </div>
         </section>
+        <!-- Calendario de disponibilidad -->
+        <section class="calendario-section">
+            <h2>Calendario de Disponibilidad</h2>
+            <div class="calendario-container">
+                <div class="calendario-header">
+                    <h3 id="mes-actual">Enero 2024</h3>
+                    
+                </div>
+
+                <div class="calendario-dias" id="calendario-dias">
+                    <!-- Días cargados dinámicamente -->
+                </div>
+
+                <div class="calendario-leyenda">
+                    <div class="leyenda-item">
+                        <span class="leyenda-color disponible"></span>
+                        <span>Disponible</span>
+                    </div>
+                    <div class="leyenda-item">
+                        <span class="leyenda-color reservado"></span>
+                        <span>Reservado</span>
+                    </div>
+                    <div class="leyenda-item">
+                        <span class="leyenda-color hoy"></span>
+                        <span>Hoy</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
 
         <!-- Turnos reservados por el usuario -->
         <section class="turnos-reservados">
@@ -183,6 +169,44 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="script.js"></script>
+
+    <style>
+        /* Estilos para el logo en el header */
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-img {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+            border-radius: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .logo-img {
+                width: 35px;
+                height: 35px;
+            }
+
+            .logo h1 {
+                font-size: 1.2rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .logo-img {
+                width: 30px;
+                height: 30px;
+            }
+
+            .logo h1 {
+                font-size: 1.1rem;
+            }
+        }
+    </style>
 </body>
 
 </html>

@@ -4,8 +4,7 @@
 
 // 1. DATOS INICIALES
 let barberos = []; // Se llenará desde Supabase
-let fechaCalendario = new Date();
-let reservasCalendario = []; // Para almacenar las reservas del mes actual
+let horariosDisponibles = []; // Horarios en filas (8:00 - 19:00)
 
 const servicios = [
     { id: 1, nombre: "Corte", precio: 30000 },
@@ -23,6 +22,13 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let turnosReservados = [];
 let serviciosSeleccionados = [];
 let canalBarberos = null;
+let canalTurnos = null;
+
+// Variable global para fecha seleccionada en la tabla
+let fechaSeleccionadaTabla = null;
+
+// Variable para almacenar turnos para la tabla
+let turnosParaTabla = [];
 
 // 3. FUNCIONES DE LOCALSTORAGE (MÁS CONFIABLE QUE COOKIES)
 function guardarTelefono(telefono) {
@@ -39,7 +45,7 @@ function eliminarTelefono() {
     console.log("🗑️ Teléfono eliminado de localStorage");
 }
 
-// 4. FUNCIONES DE VALIDACIÓN DE FECHA/HORA
+// 4. FUNCIONES DE VALIDACIÓN DE FECHA/HORA - CORREGIDAS
 function validarFechaHora(fecha, hora) {
     const ahora = new Date();
     const fechaSeleccionada = new Date(fecha + 'T' + hora + ':00');
@@ -58,6 +64,53 @@ function obtenerHoraActual() {
 function obtenerFechaActual() {
     const hoy = new Date();
     return hoy.toISOString().split('T')[0];
+}
+
+function formatearFechaParaTabla(fechaStr) {
+    const fecha = new Date(fechaStr + 'T00:00:00');
+    const diasSemana = ['DOMINGO', 'LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO'];
+    const diaSemana = diasSemana[fecha.getDay()];
+    const dia = fecha.getDate().toString().padStart(2, '0');
+    const mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
+    
+    return `${diaSemana} ${dia}/${mes}`;
+}
+
+// FUNCIÓN CORREGIDA: esDiaLaborable
+function esDiaLaborable(fecha) {
+    if (!fecha) return true; // Por defecto asumir que es laborable
+    
+    const diaSemana = fecha.getDay();
+    // 0 = Domingo (no laborable), de 1 a 6 = Lunes a Sábado (laborables)
+    return diaSemana !== 0; // Solo domingo no es laborable
+}
+
+function obtenerNombreDia(fecha) {
+    const diasSemana = ['DOMINGO', 'LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO'];
+    return diasSemana[fecha.getDay()];
+}
+
+// FUNCIÓN CORREGIDA: esHoy
+function esHoy(fecha) {
+    if (!fecha) return false;
+    
+    const hoy = new Date();
+    const fechaComparar = new Date(fecha);
+    
+    // Asegurarnos de comparar solo día, mes y año
+    return fechaComparar.getDate() === hoy.getDate() && 
+           fechaComparar.getMonth() === hoy.getMonth() && 
+           fechaComparar.getFullYear() === hoy.getFullYear();
+}
+
+// FUNCIÓN AUXILIAR: esHorarioPasado (solo para horarios específicos)
+function esHorarioPasado(fecha, hora) {
+    if (!fecha || !hora) return false;
+    
+    const ahora = new Date();
+    const fechaHoraSeleccionada = new Date(fecha + 'T' + hora + ':00');
+    
+    return fechaHoraSeleccionada < ahora;
 }
 
 // 5. INICIALIZACIÓN MEJORADA
@@ -95,8 +148,8 @@ document.addEventListener('DOMContentLoaded', async function () {
         mostrarMensajeInicial();
     }
     
-    // 5. CARGAR CALENDARIO
-    await cargarCalendario();
+    // 5. CARGAR NUEVA TABLA DE DISPONIBILIDAD (BARBEROS vs HORARIOS)
+    await cargarTablaDisponibilidad();
     
     // 6. MOSTRAR INFO DEL TELÉFONO
     mostrarInfoTelefono();
@@ -135,7 +188,8 @@ async function cargarBarberosDesdeNube() {
             especialidad: b.especialidad || "Corte y barba",
             disponible: b.activo !== false,
             telefono: b.telefono || "",
-            email: b.email || ""
+            email: b.email || "",
+            iniciales: b.nombre ? b.nombre.charAt(0).toUpperCase() : "B"
         }));
         
         // Renderizar barberos
@@ -231,205 +285,746 @@ function mostrarMensajeInicial() {
     }
 }
 
-// 8. FUNCIONES DE CALENDARIO
-async function cargarCalendario() {
-    console.log("📅 Cargando calendario...");
+// ============================================
+// FUNCIONES PARA NUEVA TABLA DE DISPONIBILIDAD
+// (BARBEROS vs HORARIOS)
+// ============================================
+
+// Función principal para cargar la tabla con barberos como columnas
+async function cargarTablaDisponibilidad() {
+    console.log("📊 Cargando tabla de disponibilidad (BARBEROS vs HORARIOS)...");
     
-    // Cargar las reservas del mes actual
-    await cargarReservasMes();
+    // 1. Asegurar que tenemos los barberos
+    if (barberos.length === 0) {
+        await cargarBarberosDesdeNube();
+    }
     
-    // Generar y renderizar el calendario
-    generarCalendario();
+    // 2. Obtener la fecha seleccionada
+    const fechaSeleccionada = obtenerFechaSeleccionadaTabla();
+    console.log("📅 Fecha para tabla:", fechaSeleccionada);
+    
+    // 3. Generar horarios del día
+    generarHorariosParaTabla();
+    
+    // 4. Cargar turnos para la fecha seleccionada
+    await cargarTurnosParaFecha(fechaSeleccionada);
+    
+    // 5. Renderizar la tabla con barberos como columnas
+    renderizarTablaBarberosHorarios(fechaSeleccionada);
 }
 
-async function cargarReservasMes() {
+function obtenerFechaSeleccionadaTabla() {
+    // Si no hay fecha seleccionada, usar hoy
+    if (!fechaSeleccionadaTabla) {
+        fechaSeleccionadaTabla = new Date();
+    }
+    return fechaSeleccionadaTabla;
+}
+
+// FUNCIÓN CORREGIDA: generarHorariosParaTabla
+function generarHorariosParaTabla() {
+    console.log("⏰ Generando horarios del día...");
+    
+    const horarios = [];
+    
+    // Solo verificar si es hoy para mostrar horarios pasados
+    const esMismoDia = fechaSeleccionadaTabla ? esHoy(fechaSeleccionadaTabla) : false;
+    const ahoraHora = esMismoDia ? new Date().getHours() : 0;
+    const ahoraMinutos = esMismoDia ? new Date().getMinutes() : 0;
+    
+    // Horario completo de la barbería: 8:00 - 19:00 con intervalos de 30 min
+    for (let h = 8; h <= 19; h++) {
+        for (let m = 0; m < 60; m += 30) {
+            // No mostrar horarios después de las 19:00
+            if (h === 19 && m > 0) break;
+            
+            const hora = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+            
+            // Verificar si es horario de descanso (11:30 - 13:00)
+            const esDescanso = (h === 11 && m >= 30) || (h === 12);
+            
+            if (esDescanso) {
+                // Es horario de descanso/almuerzo
+                horarios.push({
+                    hora: hora,
+                    esDescanso: true,
+                    disponible: false
+                });
+            } else {
+                // Es horario normal, verificar si está disponible
+                let disponible = true;
+                
+                // Solo verificar si es hoy
+                if (esMismoDia) {
+                    const minutosHora = h * 60 + m;
+                    const minutosActual = ahoraHora * 60 + ahoraMinutos;
+                    
+                    // Si el horario ya pasó (con margen de 30 minutos)
+                    if (minutosHora <= (minutosActual + 30)) {
+                        disponible = false;
+                    }
+                }
+                
+                horarios.push({
+                    hora: hora,
+                    esDescanso: false,
+                    disponible: disponible
+                });
+            }
+        }
+    }
+    
+    horariosDisponibles = horarios;
+    console.log("✅ Horarios generados para el día:", horariosDisponibles.length);
+}
+
+// Función para cargar turnos de una fecha específica
+async function cargarTurnosParaFecha(fecha) {
     try {
-        const año = fechaCalendario.getFullYear();
-        const mes = fechaCalendario.getMonth() + 1; // Enero es 0
+        const fechaStr = fecha.toISOString().split('T')[0];
+        console.log("🔍 Cargando turnos para fecha:", fechaStr);
         
-        // Calcular fechas de inicio y fin del mes
-        const primerDia = new Date(año, mes - 1, 1);
-        const ultimoDia = new Date(año, mes, 0);
+        // Usar caché para evitar múltiples consultas
+        const cacheKey = `turnos_${fechaStr}`;
+        const cacheTime = localStorage.getItem(`${cacheKey}_time`);
         
-        // Formatear fechas para la consulta
-        const fechaInicio = primerDia.toISOString().split('T')[0];
-        const fechaFin = ultimoDia.toISOString().split('T')[0];
+        // Si tenemos caché de hace menos de 10 segundos, usarlo
+        if (cacheTime && (Date.now() - parseInt(cacheTime)) < 10000) {
+            const cachedData = localStorage.getItem(cacheKey);
+            if (cachedData) {
+                console.log("📦 Usando datos en caché para:", fechaStr);
+                turnosParaTabla = JSON.parse(cachedData);
+                return turnosParaTabla;
+            }
+        }
         
-        console.log(`📊 Cargando reservas del ${fechaInicio} al ${fechaFin}`);
-        
-        // Consultar todas las reservas del mes (sin filtrar por teléfono)
+        // Consultar todos los turnos para este día
         const { data, error } = await _supabase
             .from('turnos')
-            .select('fecha, barbero_nombre')
-            .gte('fecha', fechaInicio)
-            .lte('fecha', fechaFin)
-            .eq('completado', false);
+            .select('id, fecha, hora, barbero_id, barbero_nombre')
+            .eq('fecha', fechaStr)
+            .eq('completado', false)
+            .order('hora', { ascending: true });
 
         if (error) {
-            console.error('❌ Error cargando reservas del mes:', error);
-            return;
+            console.error('❌ Error cargando turnos para tabla:', error);
+            return [];
         }
 
-        // Agrupar reservas por fecha
-        const reservasPorFecha = {};
-        data.forEach(reserva => {
-            if (!reservasPorFecha[reserva.fecha]) {
-                reservasPorFecha[reserva.fecha] = [];
-            }
-            reservasPorFecha[reserva.fecha].push(reserva.barbero_nombre);
-        });
-
-        reservasCalendario = reservasPorFecha;
-        console.log("✅ Reservas del mes cargadas:", reservasCalendario);
+        console.log("✅ Turnos encontrados para tabla:", data ? data.length : 0);
+        turnosParaTabla = data || [];
+        
+        // Guardar en caché
+        localStorage.setItem(cacheKey, JSON.stringify(turnosParaTabla));
+        localStorage.setItem(`${cacheKey}_time`, Date.now().toString());
+        
+        return turnosParaTabla;
         
     } catch (error) {
-        console.error("❌ Error en cargarReservasMes:", error);
+        console.error("❌ Error en cargarTurnosParaFecha:", error);
+        return [];
     }
 }
 
-function generarCalendario() {
+// Función para limpiar caché de turnos
+async function limpiarCacheTurnos() {
+    if (!fechaSeleccionadaTabla) return;
+    
+    const fechaStr = fechaSeleccionadaTabla.toISOString().split('T')[0];
+    const cacheKey = `turnos_${fechaStr}`;
+    
+    localStorage.removeItem(cacheKey);
+    localStorage.removeItem(`${cacheKey}_time`);
+    
+    console.log("🗑️ Caché limpiado para fecha:", fechaStr);
+}
+
+// Función principal para renderizar la tabla con barberos como columnas
+function renderizarTablaBarberosHorarios(fecha) {
     const container = document.getElementById('calendario-dias');
     const mesActual = document.getElementById('mes-actual');
     
     if (!container || !mesActual) return;
     
-    // Actualizar título del mes
-    const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
-                   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-    mesActual.textContent = `${meses[fechaCalendario.getMonth()]} ${fechaCalendario.getFullYear()}`;
+    // Formatear fecha para mostrar
+    const fechaStr = fecha.toISOString().split('T')[0];
+    const fechaFormateada = formatearFechaParaTabla(fechaStr);
     
-    // Obtener primer y último día del mes
-    const año = fechaCalendario.getFullYear();
-    const mes = fechaCalendario.getMonth();
-    const primerDia = new Date(año, mes, 1);
-    const ultimoDia = new Date(año, mes + 1, 0);
-    const diasEnMes = ultimoDia.getDate();
+    // Actualizar título
+    mesActual.textContent = fechaFormateada;
     
-    // Obtener día de la semana del primer día (0 = Domingo, 1 = Lunes, etc.)
-    let primerDiaSemana = primerDia.getDay();
-    // Ajustar para que la semana empiece en Lunes (0 = Lunes)
-    primerDiaSemana = primerDiaSemana === 0 ? 6 : primerDiaSemana - 1;
+    // Barberos disponibles (solo los que están activos)
+    const barberosDisponibles = barberos.filter(b => b.disponible);
     
-    // Limpiar container
-    container.innerHTML = '';
+    // Generar tabla HTML
+    let tablaHTML = `
+        <div class="tabla-disponibilidad-container">
+            <div class="tabla-scroll">
+                <table class="tabla-disponibilidad">
+                    <thead>
+                        <tr>
+                            <th class="col-horario">HORARIO</th>
+    `;
     
-    // Agregar días vacíos al inicio
-    for (let i = 0; i < primerDiaSemana; i++) {
-        container.appendChild(crearDiaVacio());
-    }
+    // Encabezados de columnas (barberos)
+    barberosDisponibles.forEach(barbero => {
+        tablaHTML += `<th class="col-barbero">${barbero.nombre.toUpperCase()}</th>`;
+    });
     
-    // Agregar días del mes
-    const hoy = new Date();
-    const hoyFormateado = hoy.toISOString().split('T')[0];
+    tablaHTML += `
+                        </tr>
+                    </thead>
+                    <tbody>
+    `;
     
-    for (let dia = 1; dia <= diasEnMes; dia++) {
-        const fecha = new Date(año, mes, dia);
-        const fechaFormateada = fecha.toISOString().split('T')[0];
-        const esHoy = fechaFormateada === hoyFormateado;
-        const esPasado = fecha < hoy && !esHoy;
+    // Filas de horarios
+    horariosDisponibles.forEach((horario) => {
+        const esDescanso = (horario.hora >= '11:30' && horario.hora <= '13:00');
+        const esHoyFecha = esHoy(fecha);
+        const esPasado = esHoyFecha && !horario.disponible && !esDescanso;
         
-        // Obtener reservas para esta fecha
-        const reservasDia = reservasCalendario[fechaFormateada] || [];
-        const tieneReservas = reservasDia.length > 0;
+        // Si es descanso, mostrar fila especial
+        if (esDescanso) {
+            tablaHTML += `
+                <tr class="fila-descanso">
+                    <td class="celda-horario celda-descanso-horario">
+                        <div class="horario-texto">${horario.hora}</div>
+                        <div class="descanso-texto">DESCANSO</div>
+                    </td>
+            `;
+            
+            // Celdas de barberos (todas iguales para descanso)
+            barberosDisponibles.forEach(barbero => {
+                tablaHTML += `
+                    <td class="celda-barbero celda-descanso" 
+                        data-barbero-id="${barbero.id}"
+                        data-barbero-nombre="${barbero.nombre}"
+                        data-hora="${horario.hora}"
+                        data-fecha="${fechaStr}"
+                        data-estado="DESCANSO"
+                        title="Horario de descanso/almuerzo">
+                        
+                        <div class="estado-contenido">
+                            <span class="texto-descanso">DESCANSO</span>
+                        </div>
+                    </td>
+                `;
+            });
+            
+            tablaHTML += `</tr>`;
+        } else {
+            // Fila normal
+            const claseFila = esPasado ? 'fila-pasada' : '';
+            tablaHTML += `
+                <tr class="${claseFila}" data-hora="${horario.hora}">
+                    <td class="celda-horario ${esPasado ? 'celda-pasada' : ''}">
+                        <div class="horario-texto">${horario.hora}</div>
+                        ${esPasado ? '<div class="pasado-texto">PASADO</div>' : ''}
+                    </td>
+            `;
+            
+            // Celdas para cada barbero
+            barberosDisponibles.forEach(barbero => {
+                const estado = obtenerEstadoBarberoEnHorario(barbero.id, horario.hora);
+                const claseEstado = obtenerClaseEstadoBarbero(estado);
+                const textoEstado = obtenerTextoEstadoBarbero(estado, barbero);
+                const esSeleccionable = estado === 'DISPONIBLE' && !esPasado;
+                const esNoLaborable = !esDiaLaborable(fecha);
+                
+                // Determinar clase final
+                let claseFinal = `celda-barbero ${claseEstado}`;
+                if (esSeleccionable) claseFinal += ' seleccionable';
+                if (esNoLaborable) claseFinal += ' estado-no-laborable';
+                
+                tablaHTML += `
+                    <td class="${claseFinal}" 
+                        data-barbero-id="${barbero.id}"
+                        data-barbero-nombre="${barbero.nombre}"
+                        data-hora="${horario.hora}"
+                        data-fecha="${fechaStr}"
+                        data-estado="${estado}"
+                        ${esSeleccionable && !esNoLaborable ? 'onclick="seleccionarCeldaBarbero(this)"' : ''}
+                        title="${obtenerTooltipBarbero(estado, barbero, horario.hora, esNoLaborable)}"
+                        data-iniciales="${barbero.iniciales}">
+                        
+                        <div class="estado-contenido">
+                            ${textoEstado}
+                        </div>
+                    </td>
+                `;
+            });
+            
+            tablaHTML += `</tr>`;
+        }
+    });
+    
+    tablaHTML += `
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+    
+    container.innerHTML = tablaHTML;
+    
+    // Agregar navegación
+    agregarNavegacionTablaBarberos(fecha);
+    
+    // Actualizar leyenda
+    actualizarLeyendaTablaBarberos();
+}
+
+// FUNCIÓN CORREGIDA: obtenerEstadoBarberoEnHorario
+function obtenerEstadoBarberoEnHorario(barberoId, hora) {
+    // Si no es día laborable
+    if (fechaSeleccionadaTabla && !esDiaLaborable(fechaSeleccionadaTabla)) {
+        return 'NO_LABORABLE';
+    }
+    
+    // Si es horario de descanso
+    if (hora >= '11:30' && hora <= '13:00') {
+        return 'DESCANSO';
+    }
+    
+    // Primero verificar si hay turnos cargados
+    if (!turnosParaTabla || turnosParaTabla.length === 0) {
+        // Solo verificar si es horario pasado si es HOY
+        if (fechaSeleccionadaTabla && esHoy(fechaSeleccionadaTabla)) {
+            const ahora = new Date();
+            const [hHora, mHora] = hora.split(':').map(Number);
+            const minutosHora = hHora * 60 + mHora;
+            const minutosActual = ahora.getHours() * 60 + ahora.getMinutes();
+            
+            if (minutosHora <= (minutosActual + 30)) {
+                return 'PASADO';
+            }
+        }
+        return 'DISPONIBLE';
+    }
+    
+    // Buscar si este barbero tiene un turno en este horario
+    const turnoBarbero = turnosParaTabla.find(t => 
+        t.barbero_id === barberoId && t.hora === hora
+    );
+    
+    if (turnoBarbero) {
+        return 'OCUPADO';
+    }
+    
+    // Solo verificar si es horario pasado si es HOY
+    if (fechaSeleccionadaTabla && esHoy(fechaSeleccionadaTabla)) {
+        const ahora = new Date();
+        const [hHora, mHora] = hora.split(':').map(Number);
+        const minutosHora = hHora * 60 + mHora;
+        const minutosActual = ahora.getHours() * 60 + ahora.getMinutes();
         
-        container.appendChild(crearDiaCalendario(dia, esHoy, esPasado, tieneReservas, reservasDia, fechaFormateada));
+        if (minutosHora <= (minutosActual + 30)) {
+            return 'PASADO';
+        }
+    }
+    
+    return 'DISPONIBLE';
+}
+
+// Funciones auxiliares para la nueva tabla
+function obtenerClaseEstadoBarbero(estado) {
+    switch(estado) {
+        case 'DISPONIBLE': return 'estado-disponible-barbero';
+        case 'OCUPADO': return 'estado-ocupado-barbero';
+        case 'DESCANSO': return 'estado-descanso-barbero';
+        case 'NO_LABORABLE': return 'estado-no-laborable';
+        case 'PASADO': return 'estado-pasado-barbero';
+        default: return '';
     }
 }
 
-function crearDiaVacio() {
-    const diaDiv = document.createElement('div');
-    diaDiv.className = 'dia-calendario dia-vacio';
-    return diaDiv;
+function obtenerTextoEstadoBarbero(estado, barbero) {
+    switch(estado) {
+        case 'DISPONIBLE': 
+            return `<span class="texto-disponible">LIBRE</span><span class="nombre-barbero">${barbero.nombre}</span>`;
+        case 'OCUPADO': 
+            return `<span class="texto-ocupado">OCUPADO</span>`;
+        case 'DESCANSO': 
+            return `<span class="texto-descanso">DESCANSO</span>`;
+        case 'NO_LABORABLE':
+            return `<span class="texto-no-laborable">CERRADO</span>`;
+        case 'PASADO':
+            return `<span class="texto-pasado">PASADO</span>`;
+        default: 
+            return estado;
+    }
 }
 
-function crearDiaCalendario(dia, esHoy, esPasado, tieneReservas, reservas, fecha) {
-    const diaDiv = document.createElement('div');
-    
-    // Determinar clase principal
-    let clasePrincipal = 'dia-calendario';
-    if (esHoy) {
-        clasePrincipal += ' dia-hoy';
-    } else if (esPasado) {
-        clasePrincipal += ' dia-pasado';
-    } else if (tieneReservas) {
-        clasePrincipal += ' dia-reservado';
-    } else {
-        clasePrincipal += ' dia-disponible';
+// FUNCIÓN ACTUALIZADA: obtenerTooltipBarbero
+function obtenerTooltipBarbero(estado, barbero, hora, esNoLaborable = false) {
+    if (esNoLaborable) {
+        return "Día no laborable (solo domingos)";
     }
     
-    diaDiv.className = clasePrincipal;
-    diaDiv.dataset.fecha = fecha;
-    
-    // Número del día
-    const numeroDiv = document.createElement('div');
-    numeroDiv.className = 'dia-numero';
-    numeroDiv.textContent = dia;
-    diaDiv.appendChild(numeroDiv);
-    
-    // Estado del día
-    const estadoDiv = document.createElement('div');
-    estadoDiv.className = 'dia-estado';
-    
-    if (esPasado) {
-        estadoDiv.textContent = 'Pasado';
-    } else if (tieneReservas) {
-        estadoDiv.textContent = `${reservas.length} reserva${reservas.length !== 1 ? 's' : ''}`;
-    } else {
-        estadoDiv.textContent = 'Disponible';
+    switch(estado) {
+        case 'DISPONIBLE': 
+            return `Click para reservar con ${barbero.nombre} a las ${hora} hs`;
+        case 'OCUPADO': 
+            return `${barbero.nombre} ya tiene un turno a las ${hora} hs`;
+        case 'DESCANSO': 
+            return `Horario de descanso/almuerzo (11:30-13:00)`;
+        case 'NO_LABORABLE':
+            return `Día no laborable (solo domingos)`;
+        case 'PASADO':
+            return `Horario ya pasó (solo aplica para hoy)`;
+        default: 
+            return '';
     }
-    
-    diaDiv.appendChild(estadoDiv);
-    
-    // Tooltip con detalles de reservas
-    if (tieneReservas && !esPasado) {
-        diaDiv.title = `Reservas:\n${reservas.join('\n')}`;
-    }
-    
-    // Evento click para seleccionar fecha en el formulario
-    if (!esPasado) {
-        diaDiv.addEventListener('click', () => {
-            seleccionarFechaCalendario(fecha);
-        });
-    }
-    
-    return diaDiv;
 }
 
-function seleccionarFechaCalendario(fecha) {
+// FUNCIÓN CORREGIDA: seleccionarCeldaBarbero
+function seleccionarCeldaBarbero(celda) {
+    const barberoId = parseInt(celda.dataset.barberoId);
+    const barberoNombre = celda.dataset.barberoNombre;
+    const hora = celda.dataset.hora;
+    const fecha = celda.dataset.fecha;
+    const estado = celda.dataset.estado;
+    
+    console.log("📅 Celda seleccionada:", { barberoId, barberoNombre, hora, fecha, estado });
+    
+    // Verificar estado de la celda
+    if (estado !== 'DISPONIBLE') {
+        switch(estado) {
+            case 'OCUPADO':
+                mostrarMensaje('Este horario ya está ocupado. Por favor, selecciona otro.', 'error');
+                break;
+            case 'DESCANSO':
+                mostrarMensaje('Este es un horario de descanso. Por favor, selecciona otro.', 'error');
+                break;
+            case 'PASADO':
+                // Solo mostrar este mensaje si es HOY
+                const fechaObj = new Date(fecha);
+                if (esHoy(fechaObj)) {
+                    mostrarMensaje('No puedes seleccionar un horario que ya pasó.', 'error');
+                } else {
+                    // Si no es hoy, el estado "PASADO" no debería aparecer
+                    mostrarMensaje('Este horario no está disponible.', 'error');
+                }
+                break;
+            case 'NO_LABORABLE':
+                mostrarMensaje('Este día no es laborable (solo domingos).', 'error');
+                break;
+        }
+        return;
+    }
+    
+    // Verificar si ya pasó el horario (solo para hoy)
+    const fechaObj = new Date(fecha);
+    if (esHoy(fechaObj)) {
+        const ahora = new Date();
+        const [hHora, mHora] = hora.split(':').map(Number);
+        const minutosHora = hHora * 60 + mHora;
+        const minutosActual = ahora.getHours() * 60 + ahora.getMinutes();
+        
+        if (minutosHora <= (minutosActual + 30)) {
+            mostrarMensaje('No puedes seleccionar un horario que ya pasó', 'error');
+            return;
+        }
+    }
+    
+    // Verificar si es día laborable
+    if (!esDiaLaborable(fechaObj)) {
+        mostrarMensaje('Este día no es laborable (solo domingos)', 'error');
+        return;
+    }
+    
+    // Actualizar formulario
     const fechaInput = document.getElementById('fecha');
-    if (fechaInput) {
+    const horaSelect = document.getElementById('hora');
+    const barberoSelect = document.getElementById('barbero');
+    
+    if (fechaInput && horaSelect && barberoSelect) {
         fechaInput.value = fecha;
-        console.log("📅 Fecha seleccionada en calendario:", fecha);
-        
-        // Actualizar horarios disponibles
-        cargarHorarios();
+        horaSelect.value = hora;
+        barberoSelect.value = barberoId;
         
         // Mostrar mensaje de confirmación
         const fechaFormateada = new Date(fecha + 'T00:00:00');
         const opciones = { weekday: 'long', day: 'numeric', month: 'long' };
         const fechaTexto = fechaFormateada.toLocaleDateString('es-ES', opciones);
         
-        mostrarMensaje(`Fecha seleccionada: ${fechaTexto}`, 'exito');
+        mostrarMensaje(`Turno seleccionado: ${fechaTexto} a las ${hora} hs con ${barberoNombre}`, 'exito');
         
         // Desplazar suavemente al formulario
         document.querySelector('.reserva-section').scrollIntoView({
             behavior: 'smooth',
             block: 'start'
         });
+        
+        // Resaltar celda seleccionada
+        document.querySelectorAll('.seleccionable').forEach(c => {
+            c.classList.remove('seleccionada');
+        });
+        
+        celda.classList.add('seleccionada');
     }
 }
 
-function cambiarMes(direccion) {
-    if (direccion === 'prev') {
-        fechaCalendario.setMonth(fechaCalendario.getMonth() - 1);
-    } else if (direccion === 'next') {
-        fechaCalendario.setMonth(fechaCalendario.getMonth() + 1);
+// FUNCIÓN ACTUALIZADA: agregarNavegacionTablaBarberos
+function agregarNavegacionTablaBarberos(fecha) {
+    const header = document.querySelector('.calendario-header');
+    if (!header) return;
+    
+    // Limpiar navegación anterior
+    let navContainer = header.querySelector('.navegacion-tabla-barberos');
+    if (!navContainer) {
+        navContainer = document.createElement('div');
+        navContainer.className = 'navegacion-tabla-barberos';
+        header.appendChild(navContainer);
     }
     
-    cargarCalendario();
+    const esHoyFecha = esHoy(fecha);
+    const esLaborable = esDiaLaborable(fecha);
+    
+    navContainer.innerHTML = `
+        <div class="controles-fecha">
+            <button class="btn-navegacion" id="btn-dia-anterior-barbero">
+                <i class="fas fa-chevron-left"></i> Día anterior
+            </button>
+            
+            <div class="fecha-actual-display">
+                <div class="fecha-principal">${fechaFormateada(fecha)}</div>
+                <div class="dia-semana">${obtenerNombreDia(fecha)} ${!esLaborable ? '🔒' : ''}</div>
+            </div>
+            
+            <button class="btn-navegacion" id="btn-dia-siguiente-barbero">
+                Día siguiente <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+        
+        <div class="controles-extra">
+            <button class="btn-accion ${esHoyFecha ? 'active' : ''}" id="btn-hoy-barbero">
+                <i class="fas fa-calendar-day"></i> Hoy
+            </button>
+            
+            <div class="info-barberos">
+                <i class="fas fa-users"></i> ${barberos.filter(b => b.disponible).length} barberos
+                ${!esLaborable ? '<span class="cerrado-badge">CERRADO</span>' : ''}
+            </div>
+        </div>
+    `;
+    
+    // Configurar eventos
+    document.getElementById('btn-dia-anterior-barbero')?.addEventListener('click', () => cambiarDiaTablaBarbero(-1));
+    document.getElementById('btn-hoy-barbero')?.addEventListener('click', () => irAlHoyTablaBarbero());
+    document.getElementById('btn-dia-siguiente-barbero')?.addEventListener('click', () => cambiarDiaTablaBarbero(1));
 }
 
-// 9. SUSCRIPCIONES EN TIEMPO REAL
+// Funciones auxiliares de fecha
+function fechaFormateada(fecha) {
+    const dia = fecha.getDate().toString().padStart(2, '0');
+    const mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
+    return `${dia}/${mes}`;
+}
+
+function cambiarDiaTablaBarbero(dias) {
+    if (!fechaSeleccionadaTabla) {
+        fechaSeleccionadaTabla = new Date();
+    }
+    
+    const nuevaFecha = new Date(fechaSeleccionadaTabla);
+    nuevaFecha.setDate(nuevaFecha.getDate() + dias);
+    
+    // No permitir fechas pasadas (excepto hoy)
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const nuevaFechaSinHora = new Date(nuevaFecha);
+    nuevaFechaSinHora.setHours(0, 0, 0, 0);
+    
+    if (nuevaFechaSinHora < hoy) {
+        mostrarMensaje('No se pueden ver fechas pasadas', 'error');
+        return;
+    }
+    
+    fechaSeleccionadaTabla = nuevaFecha;
+    cargarTablaDisponibilidad();
+}
+
+function irAlHoyTablaBarbero() {
+    fechaSeleccionadaTabla = new Date();
+    cargarTablaDisponibilidad();
+    mostrarMensaje('Volviendo al día actual', 'exito');
+}
+
+// Leyenda para la nueva tabla
+function actualizarLeyendaTablaBarberos() {
+    const leyendaContainer = document.querySelector('.calendario-leyenda');
+    if (!leyendaContainer) return;
+    
+    leyendaContainer.innerHTML = `
+        <div class="leyenda-tabla-barberos">
+            <div class="leyenda-grupo">
+                <div class="leyenda-item">
+                    <span class="leyenda-color disponible-barbero"></span>
+                    <span class="leyenda-texto">Libre - Click para reservar</span>
+                </div>
+                <div class="leyenda-item">
+                    <span class="leyenda-color ocupado-barbero"></span>
+                    <span class="leyenda-texto">Ocupado</span>
+                </div>
+                <div class="leyenda-item">
+                    <span class="leyenda-color descanso-barbero"></span>
+                    <span class="leyenda-texto">Descanso/Almuerzo</span>
+                </div>
+            </div>
+            <div class="leyenda-grupo">
+                <div class="leyenda-item">
+                    <span class="leyenda-color pasado-barbero"></span>
+                    <span class="leyenda-texto">Horario pasado (solo hoy)</span>
+                </div>
+                <div class="leyenda-item">
+                    <span class="leyenda-color seleccionado-barbero"></span>
+                    <span class="leyenda-texto">Seleccionado</span>
+                </div>
+                <div class="leyenda-item">
+                    <span class="leyenda-color no-laborable-barbero"></span>
+                    <span class="leyenda-texto">Cerrado (domingos)</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// 8. FUNCIÓN DE RESERVA CON VERIFICACIÓN ATÓMICA
+async function reservarTurno() {
+    const nombre = document.getElementById('nombre').value.trim();
+    const telefono = document.getElementById('telefono').value.trim();
+    const barberoId = parseInt(document.getElementById('barbero').value);
+    const fecha = document.getElementById('fecha').value;
+    const hora = document.getElementById('hora').value;
+
+    // Validaciones básicas
+    if (!nombre || !telefono || !barberoId || !fecha || !hora || serviciosSeleccionados.length === 0) {
+        mostrarMensaje('Por favor, completa todos los campos y selecciona servicios', 'error');
+        return;
+    }
+
+    // Validar que la fecha/hora no sea en el pasado
+    if (!validarFechaHora(fecha, hora)) {
+        mostrarMensaje('No puedes reservar un turno en el pasado. Por favor, selecciona una fecha y hora futuras.', 'error');
+        return;
+    }
+
+    // Verificar si el barbero sigue disponible
+    const barbero = barberos.find(b => b.id === barberoId);
+    if (!barbero || !barbero.disponible) {
+        mostrarMensaje('El barbero seleccionado ya no está disponible. Por favor, selecciona otro.', 'error');
+        cargarSelectBarberos();
+        return;
+    }
+
+    // VERIFICACIÓN ATÓMICA: Comprobar si el turno ya está ocupado
+    try {
+        console.log("🔍 Verificando disponibilidad atómica...");
+        
+        // Consulta para verificar si ya existe un turno para este barbero, fecha y hora
+        const { data: turnosExistentes, error: errorVerificacion } = await _supabase
+            .from('turnos')
+            .select('id')
+            .eq('barbero_id', barberoId)
+            .eq('fecha', fecha)
+            .eq('hora', hora)
+            .eq('completado', false);
+
+        if (errorVerificacion) {
+            console.error('❌ Error verificando disponibilidad:', errorVerificacion);
+            mostrarMensaje('Error al verificar disponibilidad. Por favor, intente nuevamente.', 'error');
+            return;
+        }
+
+        // Si ya existe un turno, mostrar error
+        if (turnosExistentes && turnosExistentes.length > 0) {
+            console.log("❌ Turno ya reservado por otro usuario:", turnosExistentes);
+            mostrarMensaje('Este horario ya está reservado con este barbero. Por favor, selecciona otro horario.', 'error');
+            
+            // Actualizar la tabla de disponibilidad para reflejar el cambio
+            await cargarTablaDisponibilidad();
+            
+            // Actualizar el select de horas
+            cargarHorarios();
+            
+            return;
+        }
+
+        console.log("✅ Horario disponible para reserva");
+
+    } catch (error) {
+        console.error("❌ Error en verificación atómica:", error);
+        mostrarMensaje('Error al verificar disponibilidad. Por favor, intente nuevamente.', 'error');
+        return;
+    }
+
+    // Crear objeto de turno
+    const nuevoTurno = {
+        cliente: nombre,
+        telefono: telefono,
+        barbero_id: barberoId,
+        barbero_nombre: barbero.nombre,
+        servicios: serviciosSeleccionados,
+        precio_total: serviciosSeleccionados.reduce((sum, s) => sum + s.precio, 0),
+        fecha: fecha,
+        hora: hora,
+        completado: false,
+        fecha_creacion: new Date().toISOString()
+    };
+
+    console.log("📋 Reservando turno:", nuevoTurno);
+
+    // Insertar en Supabase
+    const { data, error } = await _supabase
+        .from('turnos')
+        .insert([nuevoTurno])
+        .select();
+
+    if (error) {
+        console.error('❌ Error al reservar:', error);
+        
+        // Si es error de unicidad (ya existe)
+        if (error.code === '23505') {
+            mostrarMensaje('Este horario ya fue reservado por otra persona. Por favor, selecciona otro horario.', 'error');
+            
+            // Recargar tabla para mostrar estado actualizado
+            await cargarTablaDisponibilidad();
+            cargarHorarios();
+        } else {
+            mostrarMensaje('Error al reservar: ' + error.message, 'error');
+        }
+    } else {
+        console.log('✅ Turno reservado exitosamente en Supabase:', data);
+        
+        // LIMPIAR CACHÉ
+        await limpiarCacheTurnos();
+        
+        // ENVIAR NOTIFICACIÓN WHATSAPP AL BARBERO/DUEÑO
+        enviarNotificacionWhatsapp(nuevoTurno);
+        
+        mostrarMensaje('✅ ¡Turno reservado exitosamente!', 'exito');
+        
+        // GUARDAR TELÉFONO EN LOCALSTORAGE
+        guardarTelefono(telefono);
+        
+        limpiarFormulario();
+        
+        // RECARGAR TURNOS DEL USUARIO
+        await cargarTurnosDesdeNube();
+        
+        // Recargar tabla de disponibilidad para actualizar estados
+        await cargarTablaDisponibilidad();
+        
+        // Actualizar info del teléfono
+        mostrarInfoTelefono();
+        
+        // Actualizar select de horas
+        cargarHorarios();
+    }
+}
+
+// 9. FUNCIÓN MEJORADA PARA ACTUALIZAR TABLA EN TIEMPO REAL
 function configurarSuscripcionesRealtime() {
     console.log("📡 Configurando suscripciones en tiempo real...");
     
@@ -451,22 +1046,43 @@ function configurarSuscripcionesRealtime() {
             console.log('📶 Estado suscripción barberos:', status);
         });
     
-    // Suscripción a cambios en turnos
-    _supabase
+    // Suscripción a cambios en turnos (INSERT, UPDATE, DELETE)
+    canalTurnos = _supabase
         .channel('cambios-turnos-pagina')
         .on('postgres_changes', 
             { 
-                event: '*', 
+                event: 'INSERT', 
                 schema: 'public', 
                 table: 'turnos' 
             }, 
-            async () => {
-                console.log('🔄 Cambio en turnos detectado, recargando...');
-                await cargarTurnosDesdeNube();
-                await cargarCalendario(); // También actualizar calendario
+            async (payload) => {
+                console.log('🔄 Nuevo turno insertado:', payload.new);
+                // Limpiar caché y recargar todo para asegurar consistencia
+                await limpiarCacheTurnos();
+                await Promise.all([
+                    cargarTurnosDesdeNube(),
+                    cargarTablaDisponibilidad()
+                ]);
             }
         )
-        .subscribe();
+        .on('postgres_changes',
+            {
+                event: 'DELETE',
+                schema: 'public',
+                table: 'turnos'
+            },
+            async (payload) => {
+                console.log('🔄 Turno eliminado:', payload.old);
+                await limpiarCacheTurnos();
+                await Promise.all([
+                    cargarTurnosDesdeNube(),
+                    cargarTablaDisponibilidad()
+                ]);
+            }
+        )
+        .subscribe((status) => {
+            console.log('📶 Estado suscripción turnos:', status);
+        });
 }
 
 function actualizarBarberoIndividual(barberoNuevo) {
@@ -478,7 +1094,8 @@ function actualizarBarberoIndividual(barberoNuevo) {
             especialidad: barberoNuevo.especialidad || barberos[index].especialidad,
             disponible: barberoNuevo.activo !== false,
             telefono: barberoNuevo.telefono || barberos[index].telefono,
-            email: barberoNuevo.email || barberos[index].email
+            email: barberoNuevo.email || barberos[index].email,
+            iniciales: barberoNuevo.nombre ? barberoNuevo.nombre.charAt(0).toUpperCase() : "B"
         };
         
         actualizarBarberoEnUI(barberos[index]);
@@ -547,6 +1164,7 @@ function generarHorarios() {
     return horarios;
 }
 
+// FUNCIÓN CORREGIDA: cargarHorarios
 function cargarHorarios() {
     const select = document.getElementById('hora');
     if (!select) return;
@@ -554,21 +1172,50 @@ function cargarHorarios() {
     // Obtener la fecha seleccionada
     const fechaInput = document.getElementById('fecha');
     const fechaSeleccionada = fechaInput ? fechaInput.value : '';
-    const hoy = new Date();
-    const esHoy = fechaSeleccionada === hoy.toISOString().split('T')[0];
     
-    // Generar todos los horarios disponibles
-    const todosHorarios = generarHorarios();
+    if (!fechaSeleccionada) {
+        select.innerHTML = '<option value="">Selecciona una fecha primero</option>';
+        select.disabled = true;
+        return;
+    }
+    
+    const fechaObj = new Date(fechaSeleccionada);
+    const esHoyFecha = esHoy(fechaObj);
+    
+    // Verificar si es día laborable
+    if (!esDiaLaborable(fechaObj)) {
+        select.innerHTML = '<option value="">Día no laborable (domingo)</option>';
+        select.disabled = true;
+        return;
+    }
+    
+    // Generar todos los horarios disponibles (8:00-11:30 y 13:00-19:00)
+    const todosHorarios = [];
+    
+    // Mañana: 8:00 - 11:30
+    for (let h = 8; h <= 11; h++) {
+        for (let m = 0; m < 60; m += 30) {
+            if (h === 11 && m > 30) break;
+            todosHorarios.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
+        }
+    }
+    
+    // Tarde: 13:00 - 19:00
+    for (let h = 13; h <= 19; h++) {
+        for (let m = 0; m < 60; m += 30) {
+            if (h === 19 && m > 0) break;
+            todosHorarios.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
+        }
+    }
     
     // Filtrar horas si es hoy
-    let horariosDisponibles = todosHorarios;
-    if (esHoy) {
-        const horaActual = hoy.getHours();
-        const minutoActual = hoy.getMinutes();
-        const horaActualFormateada = horaActual.toString().padStart(2, '0') + ':' + 
-                                   minutoActual.toString().padStart(2, '0');
+    let horariosDisponiblesSelect = todosHorarios;
+    if (esHoyFecha) {
+        const ahora = new Date();
+        const horaActual = ahora.getHours();
+        const minutoActual = ahora.getMinutes();
         
-        horariosDisponibles = todosHorarios.filter(hora => {
+        horariosDisponiblesSelect = todosHorarios.filter(hora => {
             // Convertir "08:00" a minutos para comparar
             const [hHora, mHora] = hora.split(':').map(Number);
             const minutosHora = hHora * 60 + mHora;
@@ -578,21 +1225,26 @@ function cargarHorarios() {
             return minutosHora > (minutosActual + 30);
         });
         
-        console.log(`⏰ Hoy son las ${horaActualFormateada}. Horarios disponibles hoy:`, horariosDisponibles.length);
+        console.log(`⏰ Hoy son las ${horaActual.toString().padStart(2, '0')}:${minutoActual.toString().padStart(2, '0')}. Horarios disponibles hoy:`, horariosDisponiblesSelect.length);
     }
+    
+    // Filtrar horas de descanso (11:30 - 13:00)
+    horariosDisponiblesSelect = horariosDisponiblesSelect.filter(hora => {
+        return !(hora >= '11:30' && hora <= '13:00');
+    });
     
     // Generar opciones
     let opcionesHTML = '<option value="">Selecciona una hora</option>';
     
-    horariosDisponibles.forEach(h => {
+    horariosDisponiblesSelect.forEach(h => {
         opcionesHTML += `<option value="${h}">${h}</option>`;
     });
     
     select.innerHTML = opcionesHTML;
     
-    // Si no hay horarios disponibles para hoy
-    if (esHoy && horariosDisponibles.length === 0) {
-        select.innerHTML = '<option value="">No hay horarios disponibles para hoy</option>';
+    // Si no hay horarios disponibles
+    if (horariosDisponiblesSelect.length === 0) {
+        select.innerHTML = '<option value="">No hay horarios disponibles</option>';
         select.disabled = true;
     } else {
         select.disabled = false;
@@ -618,82 +1270,62 @@ function inicializarFecha() {
     console.log("📅 Fecha inicializada. Hoy:", hoyFormateado);
 }
 
-// 11. FUNCIONES DE RESERVA
-async function reservarTurno() {
-    const nombre = document.getElementById('nombre').value.trim();
-    const telefono = document.getElementById('telefono').value.trim();
-    const barberoId = parseInt(document.getElementById('barbero').value);
-    const fecha = document.getElementById('fecha').value;
-    const hora = document.getElementById('hora').value;
-
-    // Validaciones básicas
-    if (!nombre || !telefono || !barberoId || !fecha || !hora || serviciosSeleccionados.length === 0) {
-        mostrarMensaje('Por favor, completa todos los campos y selecciona servicios', 'error');
-        return;
-    }
-
-    // Validar que la fecha/hora no sea en el pasado
-    if (!validarFechaHora(fecha, hora)) {
-        mostrarMensaje('No puedes reservar un turno en el pasado. Por favor, selecciona una fecha y hora futuras.', 'error');
-        return;
-    }
-
-    // Verificar si el barbero sigue disponible
-    const barbero = barberos.find(b => b.id === barberoId);
-    if (!barbero || !barbero.disponible) {
-        mostrarMensaje('El barbero seleccionado ya no está disponible. Por favor, selecciona otro.', 'error');
-        cargarSelectBarberos();
-        return;
-    }
-
-    // Verificar si el turno ya está ocupado
-    const ocupado = turnosReservados.some(t => 
-        t.barbero_id === barberoId && 
-        t.fecha === fecha && 
-        t.hora === hora
-    );
+// 11. FUNCIÓN DE NOTIFICACIÓN WHATSAPP
+async function enviarNotificacionWhatsapp(reserva) {
+    // CONFIGURACIÓN - MODIFICA ESTOS DATOS CON TUS CREDENCIALES
+    const TELEFONO_DUEÑO = "5959811234567"; // Reemplaza con tu número con código de país (Paraguay: 595 + número)
+    const API_KEY = "TU_API_KEY_AQUI"; // Reemplaza con tu API Key de CallMeBot
     
-    if (ocupado) {
-        mostrarMensaje('Este horario ya está reservado con este barbero.', 'error');
+    console.log("📱 Preparando notificación WhatsApp al barbero...");
+    
+    // Validar que tengamos los datos necesarios
+    if (!reserva.cliente || !reserva.fecha || !reserva.hora || !reserva.barbero_nombre || !reserva.telefono) {
+        console.error("❌ Datos incompletos para la notificación WhatsApp");
         return;
     }
-
-    // Crear objeto de turno
-    const nuevoTurno = {
-        cliente: nombre,
-        telefono: telefono,
-        barbero_id: barberoId,
-        barbero_nombre: barbero.nombre,
-        servicios: serviciosSeleccionados,
-        precio_total: serviciosSeleccionados.reduce((sum, s) => sum + s.precio, 0),
-        fecha: fecha,
-        hora: hora,
-        completado: false
-    };
-
-    console.log("📋 Reservando turno:", nuevoTurno);
-
-    // Insertar en Supabase
-    const { error } = await _supabase
-        .from('turnos')
-        .insert([nuevoTurno]);
-
-    if (error) {
-        console.error('❌ Error al reservar:', error);
-        mostrarMensaje('Error al reservar: ' + error.message, 'error');
-    } else {
-        mostrarMensaje('✅ ¡Turno reservado exitosamente!', 'exito');
+    
+    // Formatear la fecha para que sea más legible
+    const fechaObj = new Date(reserva.fecha + 'T00:00:00');
+    const fechaFormateada = fechaObj.toLocaleDateString('es-PY', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long'
+    });
+    
+    // Formatear servicios
+    const serviciosTexto = reserva.servicios && Array.isArray(reserva.servicios) 
+        ? reserva.servicios.map(s => s.nombre).join(', ')
+        : 'No especificados';
+    
+    // Construir el mensaje (usar %0A para saltos de línea)
+    const mensaje = `💈 *¡NUEVA RESERVA CONFIRMADA!* 💈%0A%0A` +
+                    `👤 *Cliente:* ${reserva.cliente}%0A` +
+                    `📅 *Fecha:* ${fechaFormateada}%0A` +
+                    `⏰ *Hora:* ${reserva.hora} hs%0A` +
+                    `✂️ *Barbero:* ${reserva.barbero_nombre}%0A` +
+                    `📞 *Teléfono:* ${reserva.telefono}%0A` +
+                    `💰 *Total:* ${reserva.precio_total ? reserva.precio_total.toLocaleString('es-PY') + ' Gs' : 'No especificado'}%0A%0A` +
+                    `📋 *Servicios:* ${serviciosTexto}`;
+    
+    // Construir la URL de CallMeBot
+    const url = `https://api.callmebot.com/whatsapp.php?phone=${TELEFONO_DUEÑO}&text=${mensaje}&apikey=${API_KEY}`;
+    
+    try {
+        console.log("🚀 Enviando notificación WhatsApp...");
         
-        // GUARDAR TELÉFONO EN LOCALSTORAGE
-        guardarTelefono(telefono);
+        // Enviar la notificación (usar no-cors para evitar problemas de CORS)
+        fetch(url, { 
+            method: 'GET',
+            mode: 'no-cors' // Usar 'no-cors' para evitar problemas de CORS
+        }).then(() => {
+            console.log("✅ Notificación WhatsApp enviada exitosamente al barbero");
+        }).catch(error => {
+            console.warn("⚠️ Advertencia al enviar WhatsApp (puede ser normal):", error);
+        });
         
-        limpiarFormulario();
-        
-        // RECARGAR TURNOS DEL USUARIO
-        await cargarTurnosDesdeNube();
-        
-        // Actualizar info del teléfono
-        mostrarInfoTelefono();
+    } catch (error) {
+        console.error("❌ Error enviando notificación WhatsApp:", error);
+        // No mostrar error al usuario
     }
 }
 
@@ -713,7 +1345,7 @@ function renderizarTurnos() {
         let mensaje = '';
         
         if (telefonoGuardado) {
-            mensaje = `No tienes turnos reservados. ¡Reserva tu primer turno!`;
+            mensaje = 'No tienes turnos reservados. ¡Reserva tu primer turno!';
         } else {
             mensaje = 'Reserva tu primer turno para comenzar';
         }
@@ -780,7 +1412,8 @@ function renderizarTurnos() {
                 <i class="fas fa-times"></i> ${esPasado ? 'Expirado' : 'Cancelar'}
             </button>
         </div>
-    `}).join('');
+        `;
+    }).join('');
 }
 
 function mostrarInfoTelefono() {
@@ -834,6 +1467,9 @@ window.cancelarTurnoNube = async function(id) {
             mostrarMensaje("Error al eliminar turno: " + error.message, "error");
         } else {
             mostrarMensaje("✅ Turno eliminado exitosamente", "exito");
+            // Recargar tabla para actualizar disponibilidad
+            await limpiarCacheTurnos();
+            await cargarTablaDisponibilidad();
         }
     } catch (error) {
         console.error("❌ Error en cancelarTurnoNube:", error);
@@ -973,13 +1609,35 @@ function mostrarMensaje(texto, tipo) {
     }, 5000);
 }
 
+// 13. CONFIGURACIÓN DE EVENTOS
 function configurarEventos() {
     console.log("⚙️ Configurando eventos...");
     
-    // Botón de reserva
+    // Botón de reserva con protección
     const reservarBtn = document.getElementById('reservar-btn');
     if (reservarBtn) {
-        reservarBtn.addEventListener('click', reservarTurno);
+        // Remover event listeners previos
+        const newBtn = reservarBtn.cloneNode(true);
+        reservarBtn.parentNode.replaceChild(newBtn, reservarBtn);
+        
+        newBtn.addEventListener('click', async function() {
+            // Deshabilitar botón para prevenir múltiples clics
+            newBtn.disabled = true;
+            newBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Reservando...';
+            
+            try {
+                await reservarTurno();
+            } catch (error) {
+                console.error("❌ Error en reserva:", error);
+                mostrarMensaje('Error al procesar la reserva. Por favor, intente nuevamente.', 'error');
+            } finally {
+                // Rehabilitar botón después de 2 segundos
+                setTimeout(() => {
+                    newBtn.disabled = false;
+                    newBtn.innerHTML = '<i class="fas fa-calendar-check"></i> Reservar Turno';
+                }, 2000);
+            }
+        });
     }
     
     // Enlaces admin
@@ -1045,18 +1703,6 @@ function configurarEventos() {
             cargarHorarios();
         });
     }
-    
-    // Eventos del calendario
-    const prevMonthBtn = document.getElementById('prev-month');
-    const nextMonthBtn = document.getElementById('next-month');
-    
-    if (prevMonthBtn) {
-        prevMonthBtn.addEventListener('click', () => cambiarMes('prev'));
-    }
-    
-    if (nextMonthBtn) {
-        nextMonthBtn.addEventListener('click', () => cambiarMes('next'));
-    }
 }
 
 function solicitarPasswordAdmin() {
@@ -1068,11 +1714,14 @@ function solicitarPasswordAdmin() {
     }
 }
 
-// 13. LIMPIAR SUSCRIPCIONES AL SALIR
+// 14. LIMPIAR SUSCRIPCIONES AL SALIR
 window.addEventListener('beforeunload', function() {
     if (canalBarberos) {
         _supabase.removeChannel(canalBarberos);
     }
+    if (canalTurnos) {
+        _supabase.removeChannel(canalTurnos);
+    }
 });
 
-console.log("✅ script.js cargado correctamente");
+console.log("✅ script.js cargado correctamente con CORRECCIONES DE FECHA");

@@ -3,9 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Barbería Elite - Panel de Administración</title>
+    <title>Denis Barber Shop - Panel de Administración</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Estilos específicos para el logo en admin */
+        .logo-img {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+            border-radius: 5px;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        @media (max-width: 768px) {
+            .logo-img {
+                width: 35px;
+                height: 35px;
+            }
+            
+            .logo h1 {
+                font-size: 1.2rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .logo-img {
+                width: 30px;
+                height: 30px;
+            }
+            
+            .logo h1 {
+                font-size: 1.1rem;
+            }
+        }
+    </style>
 </head>
 <body>
     <!-- Menú móvil -->
@@ -16,12 +54,14 @@
     <header>
         <div class="container">
             <div class="logo">
-                <i class="fas fa-cut"></i>
-                <h1>Barbería Elite - Admin</h1>
+                <!-- Cambiado: Icono de tijera por logo -->
+                <img src="logo.png" alt="Denis Barber Shop Logo" class="logo-img">
+                <h1>Denis Barber Shop - Admin</h1>
             </div>
             <nav class="nav-desktop">
                 <ul>
-                    <li><a href="index.html">Página Principal</a></li>
+                    <li><a href="index.html">Inicio</a></li> <!-- Cambiado: Enlace a la nueva página de inicio -->
+                    <li><a href="reservar.html">Reservar Turno</a></li> <!-- Agregado: Enlace a reservas -->
                     <li><a href="admin.html" class="active">Panel Admin</a></li>
                 </ul>
             </nav>
@@ -115,7 +155,7 @@
     <footer>
         <div class="container">
             <p><i class="fas fa-user-shield"></i> Panel de administración - Acceso restringido</p>
-            <p>&copy; 2023 Barbería Elite. Uso exclusivo del personal autorizado.</p>
+            <p>&copy; 2024 Denis Barber Shop. Uso exclusivo del personal autorizado.</p> <!-- Cambiado año y nombre -->
         </div>
     </footer>
 

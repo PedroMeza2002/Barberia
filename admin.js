@@ -119,7 +119,7 @@ function renderizarBarberosAdmin() {
             barbero.email;
         
         html += `
-            <div class="barbero-card-admin ${!barbero.activo ? 'inactivo' : ''}" style="opacity: ${barbero.activo ? '1' : '0.7'};">
+            <div class="barbero-card ${!barbero.activo ? 'barbero-no-disponible' : 'barbero-disponible'}" style="opacity: ${barbero.activo ? '1' : '0.7'};">
                 <div class="barbero-header">
                     <div class="barbero-nombre">${barbero.nombre}</div>
                     <div class="estado ${barbero.activo ? 'estado-disponible' : 'estado-no-disponible'}">
@@ -128,7 +128,7 @@ function renderizarBarberosAdmin() {
                 </div>
                 
                 <div class="barbero-info">
-                    <p class="barbero-especialidad"><strong>Especialidad:</strong> ${barbero.especialidad}</p>
+                    <p><strong>Especialidad:</strong> ${barbero.especialidad}</p>
                     
                     <div class="turno-detalle">
                         <i class="fas fa-phone"></i>
@@ -146,7 +146,7 @@ function renderizarBarberosAdmin() {
                     </div>
                 </div>
                 
-                <div class="barbero-acciones" style="padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px; justify-content: flex-end;">
+                <div class="barbero-acciones" style="padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap;">
                     <button class="btn-secundario" onclick="toggleActivoBarbero(${barbero.id})" style="padding: 8px 15px;">
                         <i class="fas fa-power-off"></i> ${barbero.activo ? 'Desactivar' : 'Activar'}
                     </button>
@@ -163,7 +163,7 @@ function renderizarBarberosAdmin() {
     
     // Añadir botón para nuevo barbero
     html += `
-        <div class="barbero-card-admin" style="text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 2px dashed #d4af37; min-height: 200px;">
+        <div class="barbero-card" style="text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 2px dashed #d4af37; min-height: 200px;">
             <i class="fas fa-user-plus" style="font-size: 2.5rem; color: #d4af37; margin-bottom: 15px;"></i>
             <p style="margin-bottom: 20px; color: #666;">Agregar nuevo barbero</p>
             <button class="btn-primary" onclick="mostrarModalNuevoBarbero()" style="max-width: 200px; padding: 10px 20px;">
@@ -203,7 +203,7 @@ function actualizarSelectBarberos() {
     }
 }
 
-// 6. FUNCIONES PARA FORMATEAR FECHAS (NUEVAS)
+// 6. FUNCIONES PARA FORMATEAR FECHAS
 function formatearFechaAdmin(fechaISO) {
     if (!fechaISO) return 'Sin fecha';
     const [anio, mes, dia] = fechaISO.split('-');
@@ -541,7 +541,7 @@ async function guardarBarbero() {
     }
 }
 
-// 9. FUNCIONES DE TURNOS (ACTUALIZADAS)
+// 9. FUNCIONES DE TURNOS (ADAPTADAS A TU HTML)
 async function cargarTurnosAdmin() {
     try {
         const { data, error } = await _supabase
@@ -578,9 +578,7 @@ function renderizarTablaFiltrada() {
     const fEstado = document.getElementById('filtro-estado')?.value;
 
     let filtrados = turnosReservados.filter(t => {
-        const fechaTurnoFormateada = formatearFechaAdmin(t.fecha);
-        
-        const matchFecha = !fFecha || fechaTurnoFormateada === fFecha;
+        const matchFecha = !fFecha || t.fecha === fFecha;
         const matchBarbero = !fBarbero || t.barbero_id == fBarbero;
         const matchEstado = !fEstado || 
                            (fEstado === 'pendiente' && !t.completado) || 
@@ -600,16 +598,20 @@ function renderizarTablaFiltrada() {
     }
 
     let html = `
-        <div class="fila encabezado">
-            <div class="columna">Cliente</div>
-            <div class="columna">Barbero</div>
-            <div class="columna">Servicios</div>
-            <div class="columna">Precio</div>
-            <div class="columna">Fecha</div>
-            <div class="columna">Hora</div>
-            <div class="columna">Estado</div>
-            <div class="columna">Acciones</div>
-        </div>
+        <table class="tabla-turnos-admin" style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+            <thead>
+                <tr style="background: linear-gradient(135deg, #1a1a1a, #2d2d2d); color: white;">
+                    <th style="padding: 12px 8px; text-align: left; font-weight: 600;">Cliente</th>
+                    <th style="padding: 12px 8px; text-align: left; font-weight: 600;">Barbero</th>
+                    <th style="padding: 12px 8px; text-align: left; font-weight: 600;">Servicios</th>
+                    <th style="padding: 12px 8px; text-align: left; font-weight: 600;">Precio</th>
+                    <th style="padding: 12px 8px; text-align: left; font-weight: 600;">Fecha</th>
+                    <th style="padding: 12px 8px; text-align: left; font-weight: 600;">Hora</th>
+                    <th style="padding: 12px 8px; text-align: left; font-weight: 600;">Estado</th>
+                    <th style="padding: 12px 8px; text-align: left; font-weight: 600;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
     `;
 
     filtrados.forEach(t => {
@@ -622,34 +624,41 @@ function renderizarTablaFiltrada() {
             
         const estadoClase = t.completado ? 'completado' : 'pendiente';
         const estadoTexto = t.completado ? 'Completado' : 'Pendiente';
+        const estadoColor = t.completado ? '#28a745' : '#dc3545';
             
         html += `
-            <div class="fila ${t.completado ? 'completado' : ''}">
-                <div class="columna" data-label="Cliente">
+            <tr style="border-bottom: 1px solid #eee; background-color: ${t.completado ? '#f8f9fa' : 'white'};">
+                <td style="padding: 12px 8px; vertical-align: top;">
                     <strong>${t.cliente}</strong><br>
-                    <small>${t.telefono}</small>
-                </div>
-                <div class="columna" data-label="Barbero">${barberoNombre}</div>
-                <div class="columna" data-label="Servicios">${serviciosTxt}</div>
-                <div class="columna" data-label="Precio">${(t.precio_total || 0).toLocaleString('es-PY')} Gs</div>
-                <div class="columna" data-label="Fecha">${formatearFechaAdmin(t.fecha)}</div>
-                <div class="columna" data-label="Hora">${t.hora} hs</div>
-                <div class="columna" data-label="Estado">
-                    <span class="estado-turno ${estadoClase}">${estadoTexto}</span>
-                </div>
-                <div class="columna acciones" data-label="Acciones">
-                    ${!t.completado ? `
-                        <button class="btn-secundario" onclick="marcarCompletado(${t.id})" style="padding: 6px 12px; margin-right: 5px;">
-                            <i class="fas fa-check"></i> Cobrar
-                        </button>` : ''}
-                    <button class="btn-danger" onclick="eliminarTurno(${t.id})" style="padding: 6px 12px;">
-                        <i class="fas fa-trash"></i> Eliminar
-                    </button>
-                </div>
-            </div>
+                    <small style="color: #666;">${t.telefono}</small>
+                </td>
+                <td style="padding: 12px 8px; vertical-align: top;">${barberoNombre}</td>
+                <td style="padding: 12px 8px; vertical-align: top;">${serviciosTxt}</td>
+                <td style="padding: 12px 8px; vertical-align: top; font-weight: 500;">${(t.precio_total || 0).toLocaleString('es-PY')} Gs</td>
+                <td style="padding: 12px 8px; vertical-align: top;">${formatearFechaAdmin(t.fecha)}</td>
+                <td style="padding: 12px 8px; vertical-align: top;">${t.hora} hs</td>
+                <td style="padding: 12px 8px; vertical-align: top;">
+                    <span style="display: inline-block; padding: 4px 10px; background-color: ${estadoColor}; color: white; border-radius: 4px; font-size: 0.85rem; font-weight: 500;">
+                        ${estadoTexto}
+                    </span>
+                </td>
+                <td style="padding: 12px 8px; vertical-align: top;">
+                    <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                        ${!t.completado ? `
+                            <button class="btn-secundario" onclick="marcarCompletado(${t.id})" style="padding: 6px 12px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                                <i class="fas fa-check"></i> Cobrar
+                            </button>` : ''}
+                        <button class="btn-danger" onclick="eliminarTurno(${t.id})" style="padding: 6px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
         `;
     });
 
+    html += '</tbody></table>';
+    
     container.innerHTML = html;
 }
 
@@ -673,20 +682,9 @@ async function marcarCompletado(id) {
     }
 }
 
-// 10. ELIMINAR TURNO CON CONFIRMACIÓN DE PASSWORD (SEGURIDAD MEJORADA)
+// 10. ELIMINAR TURNO
 async function eliminarTurno(id) {
-    // Primera confirmación básica
     if (!confirm("¿Eliminar este registro permanentemente?")) {
-        return;
-    }
-    
-    // Confirmación adicional con password (seguridad extra)
-    const password = prompt("Ingrese la contraseña de administrador para confirmar eliminación:");
-    
-    if (password !== "admin123") {
-        if (password !== null) { // Solo mostrar error si no canceló
-            mostrarNotificacion("Contraseña incorrecta. Eliminación cancelada.", "error");
-        }
         return;
     }
     
@@ -701,7 +699,6 @@ async function eliminarTurno(id) {
             mostrarNotificacion("Error al eliminar el turno: " + error.message, "error");
         } else {
             mostrarNotificacion("Turno eliminado exitosamente", "exito");
-            // Recargar turnos
             await cargarTurnosAdmin();
         }
     } catch (error) {
@@ -712,10 +709,8 @@ async function eliminarTurno(id) {
 
 // 11. ESTADÍSTICAS
 function actualizarEstadisticas() {
-    const hoy = new Date();
-    const hoyFormateado = `${hoy.getDate().toString().padStart(2, '0')}/${(hoy.getMonth() + 1).toString().padStart(2, '0')}/${hoy.getFullYear()}`;
-    
-    const turnosHoy = turnosReservados.filter(t => formatearFechaAdmin(t.fecha) === hoyFormateado).length;
+    const hoy = new Date().toISOString().split('T')[0];
+    const turnosHoy = turnosReservados.filter(t => t.fecha === hoy).length;
     const pendientes = turnosReservados.filter(t => !t.completado).length;
     const completados = turnosReservados.filter(t => t.completado).length;
     const totalTurnos = turnosReservados.length;
@@ -752,41 +747,26 @@ function verificarAcceso() {
 }
 
 function configurarEventos() {
-    // Eventos de filtros de turnos
+    // Eventos de filtros
     const filtros = ['filtro-fecha', 'filtro-barbero', 'filtro-estado'];
     filtros.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
-            if (id === 'filtro-fecha') {
-                // Inicializar fecha actual en formato DD/MM/YYYY
-                const hoy = new Date();
-                const hoyFormateado = `${hoy.getDate().toString().padStart(2, '0')}/${(hoy.getMonth() + 1).toString().padStart(2, '0')}/${hoy.getFullYear()}`;
-                el.value = hoyFormateado;
-                el.placeholder = 'DD/MM/YYYY';
-                
-                // Event listener para validar formato
-                el.addEventListener('input', function(e) {
-                    const valor = e.target.value;
-                    // Validar formato básico DD/MM/YYYY
-                    if (valor === '' || valor.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-                        setTimeout(() => renderizarTablaFiltrada(), 300);
-                    }
-                });
-            } else {
-                el.addEventListener('change', renderizarTablaFiltrada);
-            }
+            el.addEventListener('change', () => {
+                setTimeout(() => renderizarTablaFiltrada(), 300);
+            });
         }
     });
 
     // Botón limpiar filtros
-    if (document.getElementById('limpiar-filtros')) {
-        document.getElementById('limpiar-filtros').addEventListener('click', () => {
+    const limpiarBtn = document.getElementById('limpiar-filtros');
+    if (limpiarBtn) {
+        limpiarBtn.addEventListener('click', () => {
             filtros.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
                     if (id === 'filtro-fecha') {
-                        const hoy = new Date();
-                        el.value = `${hoy.getDate().toString().padStart(2, '0')}/${(hoy.getMonth() + 1).toString().padStart(2, '0')}/${hoy.getFullYear()}`;
+                        el.value = '';
                     } else {
                         el.value = '';
                     }
@@ -825,7 +805,6 @@ function mostrarNotificacion(texto, tipo) {
     }
     
     notif.textContent = texto;
-    notif.className = `notificacion-admin notificacion-${tipo}`;
     
     // Estilos según tipo
     if (tipo === 'exito') {
@@ -872,7 +851,7 @@ function exportarDatos() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `barberia_elite_exportacion_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `denis_barber_shop_exportacion_${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -891,4 +870,4 @@ window.eliminarBarbero = eliminarBarbero;
 window.marcarCompletado = marcarCompletado;
 window.eliminarTurno = eliminarTurno;
 
-console.log("admin.js cargado correctamente con todas las mejoras");
+console.log("admin.js cargado correctamente");
