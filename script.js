@@ -45,12 +45,17 @@ function eliminarTelefono() {
     console.log("🗑️ Teléfono eliminado de localStorage");
 }
 
-// 4. FUNCIONES DE VALIDACIÓN DE FECHA/HORA - CORREGIDAS
+// 4. FUNCIONES DE VALIDACIÓN DE FECHA/HORA - COMPLETAMENTE CORREGIDAS
 function validarFechaHora(fecha, hora) {
-    const ahora = new Date();
-    const fechaSeleccionada = new Date(fecha + 'T' + hora + ':00');
+    if (!fecha || !hora) return false;
     
-    // Comparar fecha y hora
+    // Crear fecha seleccionada en hora local
+    const [anio, mes, dia] = fecha.split('-').map(Number);
+    const [hHora, mHora] = hora.split(':').map(Number);
+    
+    const fechaSeleccionada = new Date(anio, mes - 1, dia, hHora, mHora, 0);
+    const ahora = new Date();
+    
     return fechaSeleccionada > ahora;
 }
 
@@ -63,25 +68,31 @@ function obtenerHoraActual() {
 
 function obtenerFechaActual() {
     const hoy = new Date();
-    return hoy.toISOString().split('T')[0];
+    const año = hoy.getFullYear();
+    const mes = (hoy.getMonth() + 1).toString().padStart(2, '0'); // +1 porque getMonth() devuelve 0-11
+    const dia = hoy.getDate().toString().padStart(2, '0');
+    return `${año}-${mes}-${dia}`;
 }
 
 function formatearFechaParaTabla(fechaStr) {
-    const fecha = new Date(fechaStr + 'T00:00:00');
+    const [anio, mes, dia] = fechaStr.split('-').map(Number);
+    const fecha = new Date(anio, mes - 1, dia); // Mes -1 porque JS cuenta desde 0
+    
     const diasSemana = ['DOMINGO', 'LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO'];
     const diaSemana = diasSemana[fecha.getDay()];
-    const dia = fecha.getDate().toString().padStart(2, '0');
-    const mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
     
-    return `${diaSemana} ${dia}/${mes}`;
+    // Asegurar que el día y mes tengan 2 dígitos
+    const diaFormateado = fecha.getDate().toString().padStart(2, '0');
+    const mesFormateado = (fecha.getMonth() + 1).toString().padStart(2, '0');
+    
+    return `${diaSemana} ${diaFormateado}/${mesFormateado}`;
 }
 
 // FUNCIÓN CORREGIDA: esDiaLaborable
 function esDiaLaborable(fecha) {
-    if (!fecha) return true; // Por defecto asumir que es laborable
+    if (!fecha) return true;
     
     const diaSemana = fecha.getDay();
-    // 0 = Domingo (no laborable), de 1 a 6 = Lunes a Sábado (laborables)
     return diaSemana !== 0; // Solo domingo no es laborable
 }
 
@@ -90,27 +101,42 @@ function obtenerNombreDia(fecha) {
     return diasSemana[fecha.getDay()];
 }
 
-// FUNCIÓN CORREGIDA: esHoy
+// FUNCIÓN COMPLETAMENTE CORREGIDA: esHoy
 function esHoy(fecha) {
     if (!fecha) return false;
     
     const hoy = new Date();
     const fechaComparar = new Date(fecha);
     
-    // Asegurarnos de comparar solo día, mes y año
-    return fechaComparar.getDate() === hoy.getDate() && 
-           fechaComparar.getMonth() === hoy.getMonth() && 
-           fechaComparar.getFullYear() === hoy.getFullYear();
+    // Comparar año, mes y día
+    return hoy.getFullYear() === fechaComparar.getFullYear() &&
+           hoy.getMonth() === fechaComparar.getMonth() &&
+           hoy.getDate() === fechaComparar.getDate();
 }
 
-// FUNCIÓN AUXILIAR: esHorarioPasado (solo para horarios específicos)
+// FUNCIÓN AUXILIAR: esHorarioPasado (completamente corregida)
 function esHorarioPasado(fecha, hora) {
     if (!fecha || !hora) return false;
     
+    const [anio, mes, dia] = fecha.split('-').map(Number);
+    const [hHora, mHora] = hora.split(':').map(Number);
+    
+    const fechaHoraSeleccionada = new Date(anio, mes - 1, dia, hHora, mHora, 0);
     const ahora = new Date();
-    const fechaHoraSeleccionada = new Date(fecha + 'T' + hora + ':00');
     
     return fechaHoraSeleccionada < ahora;
+}
+
+// FUNCIÓN PARA DEBUG DE FECHAS
+function mostrarDebugFechas() {
+    console.log("=== DEBUG FECHAS ===");
+    console.log("Fecha seleccionada en tabla:", fechaSeleccionadaTabla);
+    console.log("Fecha actual:", new Date());
+    console.log("Es hoy?", esHoy(fechaSeleccionadaTabla));
+    console.log("Es día laborable?", esDiaLaborable(fechaSeleccionadaTabla));
+    console.log("Turnos cargados para tabla:", turnosParaTabla ? turnosParaTabla.length : 0);
+    console.log("Barberos disponibles:", barberos.filter(b => b.disponible).length);
+    console.log("Horarios generados:", horariosDisponibles.length);
 }
 
 // 5. INICIALIZACIÓN MEJORADA
@@ -159,6 +185,9 @@ document.addEventListener('DOMContentLoaded', async function () {
     
     // 8. CONFIGURAR SUSCRIPCIONES EN TIEMPO REAL
     configurarSuscripcionesRealtime();
+    
+    // 9. AGREGAR BOTÓN DEBUG (solo en desarrollo)
+    agregarDebugConsole();
     
     console.log("=== ✅ PÁGINA INICIALIZADA CORRECTAMENTE ===");
 });
@@ -299,68 +328,77 @@ async function cargarTablaDisponibilidad() {
         await cargarBarberosDesdeNube();
     }
     
-    // 2. Obtener la fecha seleccionada
-    const fechaSeleccionada = obtenerFechaSeleccionadaTabla();
-    console.log("📅 Fecha para tabla:", fechaSeleccionada);
+    // 2. Asegurar que tenemos fecha seleccionada
+    if (!fechaSeleccionadaTabla) {
+        fechaSeleccionadaTabla = new Date();
+        // Normalizar a medianoche
+        fechaSeleccionadaTabla.setHours(0, 0, 0, 0);
+    }
+    
+    console.log("📅 Fecha para tabla:", fechaSeleccionadaTabla);
     
     // 3. Generar horarios del día
     generarHorariosParaTabla();
     
     // 4. Cargar turnos para la fecha seleccionada
-    await cargarTurnosParaFecha(fechaSeleccionada);
+    await cargarTurnosParaFecha(fechaSeleccionadaTabla);
     
-    // 5. Renderizar la tabla con barberos como columnas
-    renderizarTablaBarberosHorarios(fechaSeleccionada);
+    // 5. Mostrar debug
+    mostrarDebugFechas();
+    
+    // 6. Renderizar la tabla con barberos como columnas
+    renderizarTablaBarberosHorarios(fechaSeleccionadaTabla);
 }
 
 function obtenerFechaSeleccionadaTabla() {
     // Si no hay fecha seleccionada, usar hoy
     if (!fechaSeleccionadaTabla) {
         fechaSeleccionadaTabla = new Date();
+        fechaSeleccionadaTabla.setHours(0, 0, 0, 0);
     }
     return fechaSeleccionadaTabla;
 }
 
-// FUNCIÓN CORREGIDA: generarHorariosParaTabla
+// FUNCIÓN COMPLETAMENTE CORREGIDA: generarHorariosParaTabla
 function generarHorariosParaTabla() {
     console.log("⏰ Generando horarios del día...");
     
     const horarios = [];
+    const fechaBase = fechaSeleccionadaTabla || new Date();
+    const esMismoDia = esHoy(fechaBase);
+    const ahora = new Date();
     
-    // Solo verificar si es hoy para mostrar horarios pasados
-    const esMismoDia = fechaSeleccionadaTabla ? esHoy(fechaSeleccionadaTabla) : false;
-    const ahoraHora = esMismoDia ? new Date().getHours() : 0;
-    const ahoraMinutos = esMismoDia ? new Date().getMinutes() : 0;
+    console.log("Fecha base:", fechaBase);
+    console.log("Es hoy?", esMismoDia);
+    console.log("Hora actual:", ahora.getHours() + ":" + ahora.getMinutes());
     
-    // Horario completo de la barbería: 8:00 - 19:00 con intervalos de 30 min
+    // Horario completo: 8:00 - 19:00 con intervalos de 30 min
     for (let h = 8; h <= 19; h++) {
         for (let m = 0; m < 60; m += 30) {
-            // No mostrar horarios después de las 19:00
             if (h === 19 && m > 0) break;
             
             const hora = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
             
-            // Verificar si es horario de descanso (11:30 - 13:00)
-            const esDescanso = (h === 11 && m >= 30) || (h === 12);
+            // Verificar si es horario de descanso
+            const esDescanso = (h === 11 && m >= 30) || (h === 12 && m < 30);
             
             if (esDescanso) {
-                // Es horario de descanso/almuerzo
                 horarios.push({
                     hora: hora,
                     esDescanso: true,
                     disponible: false
                 });
             } else {
-                // Es horario normal, verificar si está disponible
                 let disponible = true;
                 
-                // Solo verificar si es hoy
+                // Solo verificar si es hoy y está en el pasado
                 if (esMismoDia) {
-                    const minutosHora = h * 60 + m;
-                    const minutosActual = ahoraHora * 60 + ahoraMinutos;
+                    const [hHora, mHora] = hora.split(':').map(Number);
+                    const ahoraHora = ahora.getHours();
+                    const ahoraMinutos = ahora.getMinutes();
                     
-                    // Si el horario ya pasó (con margen de 30 minutos)
-                    if (minutosHora <= (minutosActual + 30)) {
+                    // Comparar horas y minutos
+                    if (hHora < ahoraHora || (hHora === ahoraHora && mHora <= ahoraMinutos)) {
                         disponible = false;
                     }
                 }
@@ -375,7 +413,8 @@ function generarHorariosParaTabla() {
     }
     
     horariosDisponibles = horarios;
-    console.log("✅ Horarios generados para el día:", horariosDisponibles.length);
+    console.log("✅ Horarios generados:", horariosDisponibles.length);
+    console.log("Ejemplos de horarios:", horarios.slice(0, 5));
 }
 
 // Función para cargar turnos de una fecha específica
@@ -574,10 +613,12 @@ function renderizarTablaBarberosHorarios(fecha) {
     actualizarLeyendaTablaBarberos();
 }
 
-// FUNCIÓN CORREGIDA: obtenerEstadoBarberoEnHorario
+// FUNCIÓN ACTUALIZADA: obtenerEstadoBarberoEnHorario
 function obtenerEstadoBarberoEnHorario(barberoId, hora) {
+    if (!fechaSeleccionadaTabla) return 'NO_LABORABLE';
+    
     // Si no es día laborable
-    if (fechaSeleccionadaTabla && !esDiaLaborable(fechaSeleccionadaTabla)) {
+    if (!esDiaLaborable(fechaSeleccionadaTabla)) {
         return 'NO_LABORABLE';
     }
     
@@ -586,40 +627,27 @@ function obtenerEstadoBarberoEnHorario(barberoId, hora) {
         return 'DESCANSO';
     }
     
-    // Primero verificar si hay turnos cargados
-    if (!turnosParaTabla || turnosParaTabla.length === 0) {
-        // Solo verificar si es horario pasado si es HOY
-        if (fechaSeleccionadaTabla && esHoy(fechaSeleccionadaTabla)) {
-            const ahora = new Date();
-            const [hHora, mHora] = hora.split(':').map(Number);
-            const minutosHora = hHora * 60 + mHora;
-            const minutosActual = ahora.getHours() * 60 + ahora.getMinutes();
-            
-            if (minutosHora <= (minutosActual + 30)) {
-                return 'PASADO';
-            }
-        }
-        return 'DISPONIBLE';
-    }
-    
-    // Buscar si este barbero tiene un turno en este horario
-    const turnoBarbero = turnosParaTabla.find(t => 
-        t.barbero_id === barberoId && t.hora === hora
-    );
-    
-    if (turnoBarbero) {
-        return 'OCUPADO';
-    }
-    
-    // Solo verificar si es horario pasado si es HOY
-    if (fechaSeleccionadaTabla && esHoy(fechaSeleccionadaTabla)) {
+    // Verificar si es hoy y si el horario ya pasó
+    if (esHoy(fechaSeleccionadaTabla)) {
         const ahora = new Date();
         const [hHora, mHora] = hora.split(':').map(Number);
         const minutosHora = hHora * 60 + mHora;
         const minutosActual = ahora.getHours() * 60 + ahora.getMinutes();
         
-        if (minutosHora <= (minutosActual + 30)) {
+        // Si el horario ya pasó
+        if (minutosHora < minutosActual) {
             return 'PASADO';
+        }
+    }
+    
+    // Buscar turnos existentes para este barbero y horario
+    if (turnosParaTabla && turnosParaTabla.length > 0) {
+        const turnoExistente = turnosParaTabla.find(t => 
+            t.barbero_id === barberoId && t.hora === hora
+        );
+        
+        if (turnoExistente) {
+            return 'OCUPADO';
         }
     }
     
@@ -697,14 +725,7 @@ function seleccionarCeldaBarbero(celda) {
                 mostrarMensaje('Este es un horario de descanso. Por favor, selecciona otro.', 'error');
                 break;
             case 'PASADO':
-                // Solo mostrar este mensaje si es HOY
-                const fechaObj = new Date(fecha);
-                if (esHoy(fechaObj)) {
-                    mostrarMensaje('No puedes seleccionar un horario que ya pasó.', 'error');
-                } else {
-                    // Si no es hoy, el estado "PASADO" no debería aparecer
-                    mostrarMensaje('Este horario no está disponible.', 'error');
-                }
+                mostrarMensaje('No puedes seleccionar un horario que ya pasó.', 'error');
                 break;
             case 'NO_LABORABLE':
                 mostrarMensaje('Este día no es laborable (solo domingos).', 'error');
@@ -714,14 +735,16 @@ function seleccionarCeldaBarbero(celda) {
     }
     
     // Verificar si ya pasó el horario (solo para hoy)
-    const fechaObj = new Date(fecha);
+    const [anio, mes, dia] = fecha.split('-').map(Number);
+    const fechaObj = new Date(anio, mes - 1, dia);
+    
     if (esHoy(fechaObj)) {
         const ahora = new Date();
         const [hHora, mHora] = hora.split(':').map(Number);
         const minutosHora = hHora * 60 + mHora;
         const minutosActual = ahora.getHours() * 60 + ahora.getMinutes();
         
-        if (minutosHora <= (minutosActual + 30)) {
+        if (minutosHora < minutosActual) {
             mostrarMensaje('No puedes seleccionar un horario que ya pasó', 'error');
             return;
         }
@@ -740,15 +763,25 @@ function seleccionarCeldaBarbero(celda) {
     
     if (fechaInput && horaSelect && barberoSelect) {
         fechaInput.value = fecha;
-        horaSelect.value = hora;
+        // ⏰ COMPLETAR HORA SOLO DESDE LA TABLA
+let option = [...horaSelect.options].find(opt => opt.value === hora);
+
+if (!option) {
+    option = document.createElement('option');
+    option.value = hora;
+    option.textContent = hora;
+    horaSelect.appendChild(option);
+}
+
+horaSelect.value = hora;
+horaSelect.classList.add('readonly');
+
         barberoSelect.value = barberoId;
         
         // Mostrar mensaje de confirmación
-        const fechaFormateada = new Date(fecha + 'T00:00:00');
-        const opciones = { weekday: 'long', day: 'numeric', month: 'long' };
-        const fechaTexto = fechaFormateada.toLocaleDateString('es-ES', opciones);
+        const fechaFormateada = formatearFecha(fecha);
         
-        mostrarMensaje(`Turno seleccionado: ${fechaTexto} a las ${hora} hs con ${barberoNombre}`, 'exito');
+        mostrarMensaje(`Turno seleccionado: ${fechaFormateada} a las ${hora} hs con ${barberoNombre}`, 'exito');
         
         // Desplazar suavemente al formulario
         document.querySelector('.reserva-section').scrollIntoView({
@@ -825,28 +858,28 @@ function fechaFormateada(fecha) {
 function cambiarDiaTablaBarbero(dias) {
     if (!fechaSeleccionadaTabla) {
         fechaSeleccionadaTabla = new Date();
+        fechaSeleccionadaTabla.setHours(0, 0, 0, 0);
     }
-    
+
     const nuevaFecha = new Date(fechaSeleccionadaTabla);
     nuevaFecha.setDate(nuevaFecha.getDate() + dias);
-    
-    // No permitir fechas pasadas (excepto hoy)
+
+    // No permitir fechas pasadas
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
-    const nuevaFechaSinHora = new Date(nuevaFecha);
-    nuevaFechaSinHora.setHours(0, 0, 0, 0);
     
-    if (nuevaFechaSinHora < hoy) {
+    if (nuevaFecha < hoy) {
         mostrarMensaje('No se pueden ver fechas pasadas', 'error');
         return;
     }
-    
+
     fechaSeleccionadaTabla = nuevaFecha;
     cargarTablaDisponibilidad();
 }
 
 function irAlHoyTablaBarbero() {
     fechaSeleccionadaTabla = new Date();
+    fechaSeleccionadaTabla.setHours(0, 0, 0, 0);
     cargarTablaDisponibilidad();
     mostrarMensaje('Volviendo al día actual', 'exito');
 }
@@ -892,20 +925,29 @@ function actualizarLeyendaTablaBarberos() {
 
 // 8. FUNCIÓN DE RESERVA CON VERIFICACIÓN ATÓMICA
 async function reservarTurno() {
+    console.log("=== INTENTANDO RESERVAR TURNO ===");
+    
     const nombre = document.getElementById('nombre').value.trim();
     const telefono = document.getElementById('telefono').value.trim();
     const barberoId = parseInt(document.getElementById('barbero').value);
     const fecha = document.getElementById('fecha').value;
     const hora = document.getElementById('hora').value;
 
+    console.log("Datos del formulario:", {
+        nombre, telefono, barberoId, fecha, hora,
+        serviciosSeleccionados: serviciosSeleccionados.length
+    });
+
     // Validaciones básicas
     if (!nombre || !telefono || !barberoId || !fecha || !hora || serviciosSeleccionados.length === 0) {
+        console.error("❌ Validación fallida: Campos incompletos");
         mostrarMensaje('Por favor, completa todos los campos y selecciona servicios', 'error');
         return;
     }
 
     // Validar que la fecha/hora no sea en el pasado
     if (!validarFechaHora(fecha, hora)) {
+        console.error("❌ Validación fallida: Fecha/hora en el pasado");
         mostrarMensaje('No puedes reservar un turno en el pasado. Por favor, selecciona una fecha y hora futuras.', 'error');
         return;
     }
@@ -913,6 +955,7 @@ async function reservarTurno() {
     // Verificar si el barbero sigue disponible
     const barbero = barberos.find(b => b.id === barberoId);
     if (!barbero || !barbero.disponible) {
+        console.error("❌ Barbero no disponible:", barbero);
         mostrarMensaje('El barbero seleccionado ya no está disponible. Por favor, selecciona otro.', 'error');
         cargarSelectBarberos();
         return;
@@ -1147,40 +1190,34 @@ function cargarSelectBarberos() {
     }
 }
 
-function generarHorarios() {
-    const horarios = [];
-    for (let h = 8; h <= 11; h++) {
-        for (let m = 0; m < 60; m += 30) {
-            if (h === 11 && m > 30) break;
-            horarios.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
-        }
-    }
-    for (let h = 13; h <= 19; h++) {
-        for (let m = 0; m < 60; m += 30) {
-            if (h === 19 && m > 0) break;
-            horarios.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
-        }
-    }
-    return horarios;
-}
-
-// FUNCIÓN CORREGIDA: cargarHorarios
+// FUNCIÓN COMPLETAMENTE CORREGIDA: cargarHorarios
 function cargarHorarios() {
     const select = document.getElementById('hora');
     if (!select) return;
     
-    // Obtener la fecha seleccionada
     const fechaInput = document.getElementById('fecha');
     const fechaSeleccionada = fechaInput ? fechaInput.value : '';
+    
+    console.log("🔄 Cargando horarios para fecha:", fechaSeleccionada);
     
     if (!fechaSeleccionada) {
         select.innerHTML = '<option value="">Selecciona una fecha primero</option>';
         select.disabled = true;
         return;
     }
+
+    const horaSelect = document.getElementById('hora');
+if (horaSelect) {
+    horaSelect.classList.add('readonly');
+}
+
     
-    const fechaObj = new Date(fechaSeleccionada);
-    const esHoyFecha = esHoy(fechaObj);
+    // Parsear fecha correctamente
+    const [anio, mes, dia] = fechaSeleccionada.split('-').map(Number);
+    const fechaObj = new Date(anio, mes - 1, dia);
+    
+    console.log("Fecha parseada:", fechaObj);
+    console.log("Día de la semana:", fechaObj.getDay(), obtenerNombreDia(fechaObj));
     
     // Verificar si es día laborable
     if (!esDiaLaborable(fechaObj)) {
@@ -1189,65 +1226,55 @@ function cargarHorarios() {
         return;
     }
     
-    // Generar todos los horarios disponibles (8:00-11:30 y 13:00-19:00)
-    const todosHorarios = [];
+    const esHoyFecha = esHoy(fechaObj);
+    const ahora = new Date();
     
-    // Mañana: 8:00 - 11:30
-    for (let h = 8; h <= 11; h++) {
-        for (let m = 0; m < 60; m += 30) {
-            if (h === 11 && m > 30) break;
-            todosHorarios.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
-        }
-    }
+    console.log("¿Es hoy?", esHoyFecha);
+    console.log("Hora actual:", ahora.getHours() + ":" + ahora.getMinutes());
     
-    // Tarde: 13:00 - 19:00
-    for (let h = 13; h <= 19; h++) {
+    // Generar horarios disponibles
+    let opcionesHTML = '<option value="">Selecciona una hora</option>';
+    let horariosDisponibles = 0;
+    
+    // Generar todos los horarios posibles (8:00-19:00)
+    for (let h = 8; h <= 19; h++) {
         for (let m = 0; m < 60; m += 30) {
             if (h === 19 && m > 0) break;
-            todosHorarios.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
+            
+            const hora = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+            
+            // Saltar horarios de descanso (11:30-13:00)
+            if ((h === 11 && m >= 30) || (h === 12 && m < 30)) {
+                continue;
+            }
+            
+            // Verificar si es hoy y si el horario ya pasó
+            let disponible = true;
+            if (esHoyFecha) {
+                const [hHora, mHora] = hora.split(':').map(Number);
+                const ahoraHora = ahora.getHours();
+                const ahoraMinutos = ahora.getMinutes();
+                
+                // Si la hora ya pasó
+                if (hHora < ahoraHora || (hHora === ahoraHora && mHora <= ahoraMinutos)) {
+                    disponible = false;
+                }
+            }
+            
+            if (disponible) {
+                opcionesHTML += `<option value="${hora}">${hora}</option>`;
+                horariosDisponibles++;
+            }
         }
     }
     
-    // Filtrar horas si es hoy
-    let horariosDisponiblesSelect = todosHorarios;
-    if (esHoyFecha) {
-        const ahora = new Date();
-        const horaActual = ahora.getHours();
-        const minutoActual = ahora.getMinutes();
-        
-        horariosDisponiblesSelect = todosHorarios.filter(hora => {
-            // Convertir "08:00" a minutos para comparar
-            const [hHora, mHora] = hora.split(':').map(Number);
-            const minutosHora = hHora * 60 + mHora;
-            const minutosActual = horaActual * 60 + minutoActual;
-            
-            // Solo mostrar horas futuras (con margen de 30 minutos)
-            return minutosHora > (minutosActual + 30);
-        });
-        
-        console.log(`⏰ Hoy son las ${horaActual.toString().padStart(2, '0')}:${minutoActual.toString().padStart(2, '0')}. Horarios disponibles hoy:`, horariosDisponiblesSelect.length);
-    }
-    
-    // Filtrar horas de descanso (11:30 - 13:00)
-    horariosDisponiblesSelect = horariosDisponiblesSelect.filter(hora => {
-        return !(hora >= '11:30' && hora <= '13:00');
-    });
-    
-    // Generar opciones
-    let opcionesHTML = '<option value="">Selecciona una hora</option>';
-    
-    horariosDisponiblesSelect.forEach(h => {
-        opcionesHTML += `<option value="${h}">${h}</option>`;
-    });
-    
     select.innerHTML = opcionesHTML;
+    select.disabled = horariosDisponibles === 0;
     
-    // Si no hay horarios disponibles
-    if (horariosDisponiblesSelect.length === 0) {
+    console.log("Horarios disponibles encontrados:", horariosDisponibles);
+    
+    if (horariosDisponibles === 0) {
         select.innerHTML = '<option value="">No hay horarios disponibles</option>';
-        select.disabled = true;
-    } else {
-        select.disabled = false;
     }
 }
 
@@ -1256,7 +1283,7 @@ function inicializarFecha() {
     if (!input) return;
     
     const hoy = new Date();
-    const hoyFormateado = hoy.toISOString().split('T')[0];
+    const hoyFormateado = hoy.toISOString().split('T')[0]; // Formato YYYY-MM-DD
     
     // Establecer fecha mínima como hoy
     input.value = hoyFormateado;
@@ -1265,9 +1292,11 @@ function inicializarFecha() {
     // Máximo 30 días en el futuro
     const maxDate = new Date();
     maxDate.setDate(maxDate.getDate() + 30);
-    input.max = maxDate.toISOString().split('T')[0];
+    const maxDateStr = maxDate.toISOString().split('T')[0];
+    input.max = maxDateStr;
     
     console.log("📅 Fecha inicializada. Hoy:", hoyFormateado);
+    console.log("Fecha objeto:", hoy);
 }
 
 // 11. FUNCIÓN DE NOTIFICACIÓN WHATSAPP
@@ -1285,7 +1314,8 @@ async function enviarNotificacionWhatsapp(reserva) {
     }
     
     // Formatear la fecha para que sea más legible
-    const fechaObj = new Date(reserva.fecha + 'T00:00:00');
+    const [anio, mes, dia] = reserva.fecha.split('-').map(Number);
+    const fechaObj = new Date(anio, mes - 1, dia);
     const fechaFormateada = fechaObj.toLocaleDateString('es-PY', {
         weekday: 'long',
         day: 'numeric',
@@ -1573,7 +1603,8 @@ function formatearPrecio(p) {
 }
 
 function formatearFecha(f) {
-    const fecha = new Date(f + 'T00:00:00');
+    const [anio, mes, dia] = f.split('-').map(Number);
+    const fecha = new Date(anio, mes - 1, dia);
     return fecha.toLocaleDateString('es-ES', { 
         weekday: 'long', 
         day: 'numeric', 
@@ -1640,16 +1671,6 @@ function configurarEventos() {
         });
     }
     
-    // Enlaces admin
-    ['admin-link', 'admin-link-mobile'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.addEventListener('click', function(e) {
-                e.preventDefault();
-                solicitarPasswordAdmin();
-            });
-        }
-    });
     
     // Menú móvil
     const menuToggle = document.querySelector('.menu-mobile-toggle');
@@ -1705,16 +1726,33 @@ function configurarEventos() {
     }
 }
 
-function solicitarPasswordAdmin() {
-    const password = prompt("Contraseña de administrador:");
-    if (password === "admin123") {
-        window.location.href = "admin.html";
-    } else if (password !== null) {
-        alert("Contraseña incorrecta");
+// 14. FUNCIÓN PARA AGREGAR DEBUG CONSOLE
+function agregarDebugConsole() {
+    // Agregar botón de debug en desarrollo
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        const debugBtn = document.createElement('button');
+        debugBtn.innerHTML = '🪲 Debug';
+        debugBtn.style.position = 'fixed';
+        debugBtn.style.bottom = '20px';
+        debugBtn.style.right = '20px';
+        debugBtn.style.zIndex = '9999';
+        debugBtn.style.padding = '10px';
+        debugBtn.style.background = '#ff4444';
+        debugBtn.style.color = 'white';
+        debugBtn.style.border = 'none';
+        debugBtn.style.borderRadius = '5px';
+        debugBtn.style.cursor = 'pointer';
+        
+        debugBtn.onclick = function() {
+            mostrarDebugFechas();
+            alert('Ver consola para información de debug');
+        };
+        
+        document.body.appendChild(debugBtn);
     }
 }
 
-// 14. LIMPIAR SUSCRIPCIONES AL SALIR
+// 15. LIMPIAR SUSCRIPCIONES AL SALIR
 window.addEventListener('beforeunload', function() {
     if (canalBarberos) {
         _supabase.removeChannel(canalBarberos);
@@ -1724,4 +1762,4 @@ window.addEventListener('beforeunload', function() {
     }
 });
 
-console.log("✅ script.js cargado correctamente con CORRECCIONES DE FECHA");
+console.log("✅ script.js cargado correctamente con TODAS LAS CORRECCIONES APLICADAS");

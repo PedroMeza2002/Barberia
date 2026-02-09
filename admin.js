@@ -2,10 +2,6 @@
 // ADMIN.JS - Sistema de Gestión de Barbería (ACTUALIZADO)
 // ============================================
 
-// 1. CONFIGURACIÓN SUPABASE
-const SUPABASE_URL = 'https://hcueuizcuiwscxqcmabn.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_4nmQhV4bchtTGumi5J2qSA_7Rli-O1m';
-const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Variables de estado global
 let turnosReservados = [];
@@ -15,14 +11,14 @@ let barberos = [];
 document.addEventListener('DOMContentLoaded', function() {
     console.log("Inicializando sistema administrativo...");
     
-    // Verificar acceso de administrador
-    verificarAcceso();
+    
     
     // Cargar datos iniciales
     cargarDatosIniciales();
     
     // Configurar eventos
     configurarEventos();
+    
 });
 
 // 3. FUNCIONES DE CARGA DE DATOS
@@ -48,7 +44,7 @@ async function cargarBarberosDesdeSupabase() {
     console.log("Cargando barberos desde Supabase...");
     
     try {
-        const { data: barberosDB, error } = await _supabase
+        const { data: barberosDB, error } = await db
             .from('barberos')
             .select('*')
             .order('id', { ascending: true });
@@ -226,7 +222,7 @@ async function toggleActivoBarbero(id) {
     console.log(`Cambiando estado del barbero ${id} a ${nuevoEstado}`);
     
     try {
-        const { error } = await _supabase
+        const { error } = await db
             .from('barberos')
             .update({ activo: nuevoEstado })
             .eq('id', id);
@@ -266,7 +262,7 @@ async function editarBarbero(id) {
 
 async function eliminarBarbero(id) {
     // Verificar si tiene turnos asociados
-    const { data: turnosAsociados, error: errorTurnos } = await _supabase
+    const { data: turnosAsociados, error: errorTurnos } = await db
         .from('turnos')
         .select('id, cliente, fecha')
         .eq('barbero_id', id)
@@ -287,7 +283,7 @@ async function eliminarBarbero(id) {
     }
     
     try {
-        const { error } = await _supabase
+        const { error } = await db
             .from('barberos')
             .delete()
             .eq('id', id);
@@ -494,12 +490,12 @@ async function guardarBarbero() {
     try {
         let result;
         if (esNuevo) {
-            result = await _supabase
+            result = await db
                 .from('barberos')
                 .insert([barberoData])
                 .select();
         } else {
-            result = await _supabase
+            result = await db
                 .from('barberos')
                 .update(barberoData)
                 .eq('id', id);
@@ -544,7 +540,7 @@ async function guardarBarbero() {
 // 9. FUNCIONES DE TURNOS (ADAPTADAS A TU HTML)
 async function cargarTurnosAdmin() {
     try {
-        const { data, error } = await _supabase
+        const { data, error } = await db
             .from('turnos')
             .select('*')
             .order('fecha', { ascending: true })
@@ -664,7 +660,7 @@ function renderizarTablaFiltrada() {
 
 async function marcarCompletado(id) {
     try {
-        const { error } = await _supabase
+        const { error } = await db
             .from('turnos')
             .update({ completado: true })
             .eq('id', id);
@@ -689,7 +685,7 @@ async function eliminarTurno(id) {
     }
     
     try {
-        const { error } = await _supabase
+        const { error } = await db
             .from('turnos')
             .delete()
             .eq('id', id);
@@ -733,18 +729,7 @@ function actualizarEstadisticas() {
     });
 }
 
-// 12. FUNCIONES AUXILIARES
-function verificarAcceso() {
-    const auth = sessionStorage.getItem('admin-authenticated');
-    if (auth !== 'admin123') {
-        const pass = prompt("Contraseña de Administrador:");
-        if (pass === "admin123") {
-            sessionStorage.setItem('admin-authenticated', 'admin123');
-        } else {
-            window.location.href = 'index.html';
-        }
-    }
-}
+
 
 function configurarEventos() {
     // Eventos de filtros
@@ -757,6 +742,15 @@ function configurarEventos() {
             });
         }
     });
+    
+    // 🔥 BOTÓN RESET TOTAL (funciona aunque tenga spans/iconos)
+document.addEventListener('click', function (e) {
+    const btn = e.target.closest('#btn-reset-total');
+    if (btn) {
+        resetTotalSistema();
+    }
+});
+
 
     // Botón limpiar filtros
     const limpiarBtn = document.getElementById('limpiar-filtros');
@@ -776,33 +770,44 @@ function configurarEventos() {
         });
     }
     
-    // Evento para exportar datos
-    const btnExportar = document.getElementById('btn-exportar');
-    if (btnExportar) {
-        btnExportar.addEventListener('click', exportarDatos);
-    }
+    document.getElementById('btn-exportar').addEventListener('click', exportarPDF);
+
+function exportarPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    // 🔰 Título
+    doc.setFontSize(18);
+    doc.text("Denis Barber Shop", 14, 20);
+    doc.setFontSize(14);
+    doc.text("Reporte de Estadísticas", 14, 30);
+
+    doc.setFontSize(11);
+
+    // 📊 Datos (tomados del DOM, no recalculamos nada)
+    const datos = [
+        ["Turnos Hoy", document.getElementById('turnos-hoy').textContent],
+        ["Turnos Pendientes", document.getElementById('turnos-pendientes').textContent],
+        ["Turnos Completados", document.getElementById('turnos-completados').textContent],
+        ["Total Turnos", document.getElementById('total-turnos').textContent],
+        ["Ingresos Totales", document.getElementById('ingresos-totales').textContent],
+    ];
+
+    let y = 50;
+    datos.forEach(([label, value]) => {
+        doc.text(`${label}: ${value}`, 14, y);
+        y += 10;
+    });
+
+    // 📅 Fecha
+    const fecha = new Date().toLocaleString('es-ES');
+    doc.setFontSize(9);
+    doc.text(`Generado el: ${fecha}`, 14, y + 10);
+
+    // 💾 Descargar
+    doc.save("Reporte_DenisBarberShop.pdf");
 }
 
-function mostrarNotificacion(texto, tipo) {
-    let notif = document.getElementById('notificacion-admin');
-    if (!notif) {
-        notif = document.createElement('div');
-        notif.id = 'notificacion-admin';
-        notif.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 20px;
-            border-radius: 8px;
-            color: white;
-            font-weight: 500;
-            z-index: 10000;
-            display: none;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            max-width: 300px;
-        `;
-        document.body.appendChild(notif);
-    }
     
     notif.textContent = texto;
     
@@ -860,6 +865,60 @@ function exportarDatos() {
     mostrarNotificacion('Datos exportados exitosamente', 'exito');
 }
 
+// ============================================
+// RESET TOTAL - TURNOS + STORAGE + UI
+// ============================================
+async function resetTotalSistema() {
+
+    const confirmacion = confirm(
+        "⚠️ RESET TOTAL\n\n" +
+        "Esto eliminará TODOS los turnos,\n" +
+        "limpiará la sesión y recargará el sistema.\n\n" +
+        "¿Seguro que deseas continuar?"
+    );
+
+    if (!confirmacion) return;
+
+    try {
+        // 1️⃣ BORRAR TODOS LOS TURNOS EN SUPABASE
+        const { error } = await db
+            .from('turnos')
+            .delete()
+            .neq('id', 0); // borrar todo
+
+        if (error) throw error;
+
+        // 2️⃣ LIMPIAR ESTADO LOCAL
+        turnosReservados = [];
+
+        // 3️⃣ LIMPIAR STORAGE
+        localStorage.clear();
+        sessionStorage.clear();
+
+        // 4️⃣ LIMPIAR UI
+        const contenedor = document.getElementById('turnos-admin-container');
+        if (contenedor) {
+            contenedor.innerHTML = `
+                <div class="sin-turnos">
+                    <i class="fas fa-broom"></i>
+                    <p>Sistema reiniciado</p>
+                </div>
+            `;
+        }
+
+        // 5️⃣ NOTIFICACIÓN
+        mostrarNotificacion("Reset total realizado correctamente", "exito");
+
+        // 6️⃣ RECARGAR TODO
+        setTimeout(() => location.reload(), 1500);
+
+    } catch (err) {
+        console.error("Error en reset total:", err);
+        mostrarNotificacion("Error al realizar reset total", "error");
+    }
+}
+
+
 // 13. Hacer funciones disponibles globalmente
 window.mostrarModalNuevoBarbero = mostrarModalNuevoBarbero;
 window.cerrarModalBarbero = cerrarModalBarbero;
@@ -871,3 +930,19 @@ window.marcarCompletado = marcarCompletado;
 window.eliminarTurno = eliminarTurno;
 
 console.log("admin.js cargado correctamente");
+window.resetTotalSistema = resetTotalSistema;
+
+document.addEventListener('DOMContentLoaded', () => {
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    if (!logoutBtn) return;
+
+    logoutBtn.addEventListener('click', async () => {
+        if (!confirm('¿Cerrar sesión?')) return;
+
+        await window.db.auth.signOut();
+        window.location.href = 'login.html';
+    });
+});
+
+

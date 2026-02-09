@@ -2441,3 +2441,59 @@ footer i {
     color: #6c757d !important;
     font-weight: 500;
 }
+
+.btn-reset-total {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    background: linear-gradient(135deg, #c0392b, #e74c3c);
+    color: #fff;
+
+    padding: 14px 18px;
+    border: none;
+    border-radius: 12px;
+
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+
+    box-shadow: 0 10px 25px rgba(192, 57, 43, 0.35);
+    transition: all 0.25s ease;
+}
+
+.btn-reset-total .icon {
+    font-size: 22px;
+}
+
+.btn-reset-total .text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+}
+
+.btn-reset-total small {
+    font-size: 12px;
+    opacity: 0.85;
+}
+
+/* Hover */
+.btn-reset-total:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 14px 30px rgba(192, 57, 43, 0.45);
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+}
+
+/* Click */
+.btn-reset-total:active {
+    transform: scale(0.97);
+    box-shadow: 0 6px 14px rgba(192, 57, 43, 0.3);
+}
+
+/* Disabled (por si lo usás después) */
+.btn-reset-total:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    box-shadow: none;
+}
