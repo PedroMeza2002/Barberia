@@ -3,6 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- 🔐 EVITAR CACHÉ EN PÁGINAS PROTEGIDAS -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
     <title>Denis Barber Shop - Panel de Administración</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -54,19 +60,17 @@
     <header>
         <div class="container">
             <div class="logo">
-                <!-- Cambiado: Icono de tijera por logo -->
                 <img src="logo.png" alt="Denis Barber Shop Logo" class="logo-img">
                 <h1>Denis Barber Shop - Admin</h1>
             </div>
             <nav class="nav-desktop">
                 <ul>
-                    <li><a href="index.html">Inicio</a></li> <!-- Cambiado: Enlace a la nueva página de inicio -->
-                    <li><a href="reservar.html">Reservar Turno</a></li> <!-- Agregado: Enlace a reservas -->
+                    <li><a href="index.html">Inicio</a></li>
+                    <li><a href="reservar.html">Reservar Turno</a></li>
                     <li><a href="admin.html" class="active">Panel Admin</a></li>
                     <li><a href="PanelBarberos.html">Panel Barberos</a></li>
                 </ul>
             </nav>
-            <!-- BOTÓN CERRAR SESIÓN -->
             <button id="logoutBtn" style="
                 background:#dc3545;
                 color:white;
@@ -84,7 +88,7 @@
     <main class="container">
         <section class="hero">
             <h2>Panel de Administración</h2>
-            <p>Gestiona la disponibilidad de barberos,los turnos reservados y estadisticas </p>
+            <p>Gestiona la disponibilidad de barberos, los turnos reservados y estadisticas</p>
         </section>
 
         <!-- Sección de Gestión de Barberos -->
@@ -128,16 +132,13 @@
 
         <!-- Turnos reservados -->
         <section class="turnos-admin-section">
-            
             <button id="btn-reset-total" class="btn-reset-total">
-    <span class="icon">⚠️</span>
-    <span class="text">
-        <strong>RESET TOTAL</strong>
-        <small>Borrar todos los turnos</small>
-    </span>
-</button>
-
-
+                <span class="icon">⚠️</span>
+                <span class="text">
+                    <strong>RESET TOTAL</strong>
+                    <small>Borrar todos los turnos</small>
+                </span>
+            </button>
             <h2>Turnos Reservados</h2>
             <div class="tabla-turnos-admin" id="turnos-admin-container">
                 <!-- Turnos cargados dinámicamente -->
@@ -178,17 +179,15 @@
     <footer>
         <div class="container">
             <p><i class="fas fa-user-shield"></i> Panel de administración - Acceso restringido</p>
-            <p>&copy; 2026 Denis Barber Shop. Uso exclusivo del personal autorizado.</p> <!-- Cambiado año y nombre -->
+            <p>&copy; 2026 Denis Barber Shop. Uso exclusivo del personal autorizado.</p>
         </div>
     </footer>
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabaseClient.js"></script>
-<script src="authGuardAdmin.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-<script src="admin.js"></script>
-
+    <script src="supabaseClient.js"></script>
+    <script src="authGuardAdmin.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="admin.js"></script>
 </body>
 </html>
