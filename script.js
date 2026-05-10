@@ -309,6 +309,18 @@ function obtenerFechaSeleccionadaTabla() {
 }
 
 // ✅ FUNCIÓN CORREGIDA: generarHorariosParaTabla (Horarios hasta 19:00, descanso solo 12:00-12:30)
+function obtenerHoraFinPorFecha(fecha) {
+    const diaSemana = fecha.getDay();
+
+    if (diaSemana === 0) return null; // Domingo cerrado
+
+    if (diaSemana >= 1 && diaSemana <= 3) return 20; // Lunes a miércoles
+
+    if (diaSemana >= 4 && diaSemana <= 6) return 22; // Jueves a sábado
+
+    return 20;
+}
+
 function generarHorariosParaTabla() {
     console.log("⏰ Generando horarios del día...");
     
@@ -316,20 +328,24 @@ function generarHorariosParaTabla() {
     const fechaBase = fechaSeleccionadaTabla || new Date();
     const esMismoDia = esHoy(fechaBase);
     const ahora = new Date();
+    const horaFin = obtenerHoraFinPorFecha(fechaBase);
     
     console.log("Fecha base:", fechaBase);
     console.log("Es hoy?", esMismoDia);
     console.log("Hora actual:", ahora.getHours() + ":" + ahora.getMinutes());
+    console.log("Hora final:", horaFin === null ? "CERRADO" : horaFin + ":00");
     
-    // Horario: 8:00 a 19:00 con intervalos de 30 min
-    for (let h = 8; h <= 19; h++) {
+    if (horaFin === null) {
+        horariosDisponibles = [];
+        return;
+    }
+    
+    for (let h = 8; h <= horaFin; h++) {
         for (let m = 0; m < 60; m += 30) {
-            if (h === 19 && m > 0) break; // Solo hasta 19:00
+            if (h === horaFin && m > 0) break;
             
             const hora = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-            
-            // ✅ Descanso SOLO de 12:00 a 12:30
-            const esDescanso = (h === 12); // 12:00 y 12:30 son descanso
+            const esDescanso = (h === 12);
             
             if (esDescanso) {
                 horarios.push({
@@ -361,12 +377,8 @@ function generarHorariosParaTabla() {
     
     horariosDisponibles = horarios;
     console.log("✅ Horarios generados:", horariosDisponibles.length);
-    
-    const descansos = horarios.filter(h => h.esDescanso).map(h => h.hora);
-    console.log("🕐 Horarios de descanso (12:00-12:30):", descansos);
-    console.log("Último horario:", horarios[horarios.length - 1].hora);
+    console.log("Último horario:", horarios.length ? horarios[horarios.length - 1].hora : "Sin horarios");
 }
-
 async function cargarTurnosParaFecha(fecha) {
     try {
         const fechaStr = fecha.toISOString().split('T')[0];
@@ -857,18 +869,23 @@ function cargarHorarios() {
     
     const esHoyFecha = esHoy(fechaObj);
     const ahora = new Date();
+    const horaFin = obtenerHoraFinPorFecha(fechaObj);
+    
+    if (horaFin === null) {
+        select.innerHTML = '<option value="">Día no laborable (domingo)</option>';
+        select.disabled = true;
+        return;
+    }
     
     let opcionesHTML = '<option value="">Selecciona una hora</option>';
     let horariosDisponibles = 0;
     
-    // ✅ Descanso SOLO de 12:00 a 12:30
-    const descansoInicio = 12 * 60;       // 12:00
-    const descansoFin = 12 * 60 + 30;     // 12:30
+    const descansoInicio = 12 * 60;
+    const descansoFin = 12 * 60 + 30;
     
-    // ✅ Horarios SOLO hasta 19:00
-    for (let h = 8; h <= 19; h++) {
+    for (let h = 8; h <= horaFin; h++) {
         for (let m = 0; m < 60; m += 30) {
-            if (h === 19 && m > 0) break; // Solo 19:00
+            if (h === horaFin && m > 0) break;
             
             const hora = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
             const minutosHora = h * 60 + m;
